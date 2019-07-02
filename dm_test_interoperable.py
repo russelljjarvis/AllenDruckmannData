@@ -4,8 +4,6 @@ This is a hacking, re-writing and re-purposing of JB NU unit test of Druckman te
 
 Which seemed to work really well with a static NU backend.
 
-Used to be Unit-Tests of the 38 Druckmann 2013 test classes
-
 """
 
 import unittest
