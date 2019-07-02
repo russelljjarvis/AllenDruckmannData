@@ -19,7 +19,9 @@ import sys, os
 
 def map_to_protocol():
     '''
-    Just a dictionary that keeps track of which protocol is used by each test.
+    A method that takes nothing and returns 
+    a hard coded dictionary that keeps track of which protocol is used by each test.
+    which is helpful on the data analysis end of this pipeline.
     '''
     standard = 1.5
     strong = 3.0
