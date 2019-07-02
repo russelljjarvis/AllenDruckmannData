@@ -241,7 +241,7 @@ def allen_format(volts,times):
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
     middle_spike_index = int(len(spikes)/2.0)
-    midle_spike_info = pd.DataFrame(spikes[middle_spike_index])
+    #midle_spike_info = pd.DataFrame(spikes[middle_spike_index])
     #
     #
 
@@ -254,7 +254,11 @@ def allen_format(volts,times):
     for s in swp.sweep_feature_keys():
         allen_features[s] = swp.sweep_feature(s)
         if str('isi_type') not in s:
-            meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+            try:
+                meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+            except:
+                import pdb; pdb.set_trace()
+                meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
 
     #print(swp.sweep_feature(s),s)
     #for s in swp.spike_feature_keys(): print(swp.spike_feature(s))
@@ -263,7 +267,7 @@ def allen_format(volts,times):
     per_spike_info = spikes
     frame = pd.DataFrame(allen_features)
     meaned_features_overspikes = pd.DataFrame(meaned_features_overspikes)
-    return allen_features,frame,per_spike_info, midle_spike_info, meaned_features_overspikes
+    return allen_features,frame,per_spike_info,None, meaned_features_overspikes
 
 def recoverable_interuptable_batch_process():
     '''
