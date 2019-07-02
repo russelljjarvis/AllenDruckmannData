@@ -64,7 +64,7 @@ import matplotlib.pyplot as plt
 #import ssl
 #ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
-import interoperable #import Interoperabe
+import dm_test_interoperable #import Interoperabe
 
 
 def generate_prediction(self,model):
@@ -336,7 +336,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     ##
     # Druckman features
     ##
-    a = interoperable.Interoperabe()
+    a = dm_test_interoperable.Interoperabe()
     a.test_setup(None,None,model= model)
     dm_test_features = a.runTest()
     dm_frame = pd.DataFrame(dm_test_features)
