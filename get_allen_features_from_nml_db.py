@@ -255,19 +255,26 @@ def allen_format(volts,times):
         allen_features[s] = swp.sweep_feature(s)
         if str('isi_type') not in s:
             try:
-                meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
-            except:
-                import pdb; pdb.set_trace()
-                meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+                if len(swp.spike_feature(s))>1:
+                    #assert swp.spike_feature(s)
+                    meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+                else:
+                    meaned_features_overspikes[s] = swp.sweep_feature(s)
 
-    #print(swp.sweep_feature(s),s)
-    #for s in swp.spike_feature_keys(): print(swp.spike_feature(s))
-    #for s in swp.spike_feature_keys():
+            except:
+                meaned_features_overspikes[s] = None #np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+                print(meaned_features_overspikes)
+                import pdb
+                pdb.set_trace()
 
     per_spike_info = spikes
-    frame = pd.DataFrame(allen_features)
+    try:
+        frame = pd.DataFrame(allen_features)
+    except:
+        frame = allen_features
+
     meaned_features_overspikes = pd.DataFrame(meaned_features_overspikes)
-    return allen_features,frame,per_spike_info,None, meaned_features_overspikes
+    return allen_features,frame,per_spike_info, meaned_features_overspikes
 
 def recoverable_interuptable_batch_process():
     '''
@@ -319,7 +326,7 @@ def recoverable_interuptable_batch_process():
 
 
 
-def standard_nu_tests(model,lookup,current):
+def standard_nu_tests(model,lookup):
 	'''
 	Do standard NU predictions, to do this may need to overwrite generate_prediction
 	Overwrite/ride. a NU models inject_square_current,generate_prediction methods
@@ -331,7 +338,6 @@ def standard_nu_tests(model,lookup,current):
 	local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
 	nu_preds = []
 	for t in local_tests:
-	    # pred = t.generate_prediction(model)
 	    try:
 		    pred = t.generate_prediction(model)
 	    except:
@@ -427,10 +433,25 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     ##
     # Get Druckman features, this is mainly handled in external files.
     ##
-    a = dm_test_interoperable.DMTNMLO()
-    a.test_setup(None,None,model= model)
-    dm_test_features = a.runTest()
+    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO.test_setup(None,None,model= model)
+    dm_test_features = DMTNMLO.runTest()
     dm_frame = pd.DataFrame(dm_test_features)
+
+    def not_necessary_for_program_completion():
+        current = DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()
+        DMTNMLO.model.nmldb_model.get_waveform_by_current(current)
+        temp0 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_strong_current()))
+        temp1 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()))
+        assert temp0 != temp1
+        returns
+    #import pdb; pdb.set_trace()
+    #standard = DMTNMLO..get_druckmann2013_standard_current()
+    #strong = DMTNMLO.nmldb_model.get_druckmann2013_strong_current()
+    #ir_currents = DMTNMLO.model.nmldb_model.get_druckmann2013_input_resistance_currents()
+
+
+    assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
 
     ##
     # wrangle data in preperation for computing
@@ -446,7 +467,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     # Allen Features
     ##
 
-    allen_features,frame30, mdd30, mfos30 = allen_format(volts,times)
+    allen_features,frame30, mfos30 = allen_format(volts,times)
     frame30['protocol'] = 3.0
 
     ##
@@ -461,20 +482,24 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     # Allen Features
     ##
 
-    allen_features,frame15, mdd15, mfos15 = allen_format(volts,times)
+    allen_features,frame15, mfos15 = allen_format(volts,times)
     frame15['protocol'] = 1.5
     allen_frame = frame30.append(frame15)
     allen_frame.set_index('protocol')
 
-    try:
-       lookup = {}
-       lookup[model.druckmann2013_input_resistance_currents[0]] = model.vminh
-       lookup[model.druckmann2013_standard_current] = model.vm15
-       lookup[ model.druckmann2013_strong_current ] = model.vm30
-       nu_preds = standard_nu_tests(model,lookup,current)
+    #try:
+    lookup = {}
+    lookup[model.druckmann2013_input_resistance_currents[0]] = model.vminh
+    lookup[model.druckmann2013_standard_current] = model.vm15
+    lookup[ model.druckmann2013_strong_current ] = model.vm30
+    nu_preds = standard_nu_tests(model,lookup)
 
-    except:
-        print('standard nu tests failed.')
+
+
+    #   print(nu_preds)
+
+    #except:
+    #    print('standard nu tests failed.')
     #import pdb; pdb.set_trace()
 
     return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame,'allen_spike_data':(per_spike_info_15,per_spike_info_30)}
