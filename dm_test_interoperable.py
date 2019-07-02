@@ -1,4 +1,12 @@
-"""Tests of the 38 Druckmann 2013 test classes"""
+"""
+
+This is a hacking, re-writing and re-purposing of JB NU unit test of Druckman tests
+
+Which seemed to work really well with a static NU backend.
+
+Used to be Unit-Tests of the 38 Druckmann 2013 test classes
+
+"""
 
 import unittest
 import pickle
@@ -12,6 +20,9 @@ import glob
 import sys, os
 
 def map_to_protocol():
+    '''
+    Just a dictionary that keeps track of which protocol is used by each test.
+    '''
     standard = 1.5
     strong = 3.0
     easy_map = [
