@@ -1,10 +1,8 @@
 """
 
-This is a hacking, re-writing and re-purposing of JB NU unit test of Druckman tests
-
+This file contains a Druckman NU test static-neuromld model running object.
+This is a hacking, re-writing and re-purposing of JB NU unit test of Druckman tests.
 Which seemed to work really well with a static NU backend.
-
-Used to be Unit-Tests of the 38 Druckmann 2013 test classes
 
 """
 
@@ -21,7 +19,9 @@ import sys, os
 
 def map_to_protocol():
     '''
-    Just a dictionary that keeps track of which protocol is used by each test.
+    A method that takes nothing and returns 
+    a hard coded dictionary that keeps track of which protocol is used by each test.
+    which is helpful on the data analysis end of this pipeline.
     '''
     standard = 1.5
     strong = 3.0
@@ -71,8 +71,10 @@ def map_to_protocol():
     test_prot_map = test_prot_map
     return test_prot_map
 
-#class Druckmann2013BaseTestCase:
-class Interoperabe(object):
+class DMTNMLO(object):
+    '''
+    An object for wrapping Druckman tests on instancable NeuroML-DB static models all in one neat package.
+    '''
     def __init__(self):
 
         self.predicted = {}
@@ -170,6 +172,8 @@ class Interoperabe(object):
         self.set_expected(self.expected)
         #import pdb; pdb.set_trace()
 
+    '''
+    Depreciated
 
     def get_model(self):
 
@@ -186,15 +190,12 @@ class Interoperabe(object):
 
         model = self.__class__.model_cache[self.model_id]
         return model
-
     @classmethod
     def pickle_model_cache(cls):
-        '''
-        Use this function to re-pickle models after tests have
-        run (and waveforms have been downloaded from NeuroML-DB.org)
-        :return: Nothing, models are saved in a pickle file
-        '''
-
+        # Use this function to re-pickle models after tests have
+        # run (and waveforms have been downloaded from NeuroML-DB.org)
+        # :return: Nothing, models are saved in a pickle file
+        
         for model in cls.model_cache.values():
             # Clear AnalogSignal versions (to reduce file size) and pickle the model (to speed up unit tests)
             model.vm = None
@@ -204,7 +205,7 @@ class Interoperabe(object):
         #import pickle
         with open(cls.pickle_file, 'w') as fp:
             pickle.dump(cls.model_cache, fp)
-
+    '''
     def run_test(self, index):
         test_class = self.test_set[index]['test']
         expected = self.test_set[index]['expected']
