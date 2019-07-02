@@ -438,13 +438,14 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     dm_test_features = DMTNMLO.runTest()
     dm_frame = pd.DataFrame(dm_test_features)
 
-    def not_necessary_for_program_completion():
+    def not_necessary_for_program_completion(DMTNMLO):
         current = DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()
         DMTNMLO.model.nmldb_model.get_waveform_by_current(current)
         temp0 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_strong_current()))
         temp1 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()))
         assert temp0 != temp1
-        returns
+        return
+    _ = not_necessary_for_program_completion(DMTNMLO)    
     #import pdb; pdb.set_trace()
     #standard = DMTNMLO..get_druckmann2013_standard_current()
     #strong = DMTNMLO.nmldb_model.get_druckmann2013_strong_current()
