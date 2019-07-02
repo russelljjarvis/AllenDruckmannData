@@ -19,7 +19,7 @@ import sys, os
 
 def map_to_protocol():
     '''
-    A method that takes nothing and returns 
+    A method that takes nothing and returns
     a hard coded dictionary that keeps track of which protocol is used by each test.
     which is helpful on the data analysis end of this pipeline.
     '''
@@ -108,6 +108,17 @@ class DMTNMLO(object):
             self.test_set[i]['expected'] = v
 
     def test_setup(self,model_id,model_dict,model=None):
+        '''
+        Synopsis: Construct initialize and otherwise setup Druckman tests.
+        if a model does not exist yet, but a desired NML-DB model id is known, use the model-id
+        to quickly initialize a NML-DB model.
+
+        If a model is actually passed instead, assume that model has known current_injection value
+        attributes and use those.
+
+        inputs: model_id, and a dictionary lookup table of models/model_ids
+
+        '''
         if not hasattr(self, "expected"):
             self.expected = [0.0 for i in range(38)]
 
@@ -195,7 +206,7 @@ class DMTNMLO(object):
         # Use this function to re-pickle models after tests have
         # run (and waveforms have been downloaded from NeuroML-DB.org)
         # :return: Nothing, models are saved in a pickle file
-        
+
         for model in cls.model_cache.values():
             # Clear AnalogSignal versions (to reduce file size) and pickle the model (to speed up unit tests)
             model.vm = None
