@@ -50,12 +50,14 @@ import efel
 import pickle
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd
-from allensdk.ephys.extract_cell_features import extract_cell_features
 import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
+from neuronunit.capabilities import spike_functions as sf
 import dm_test_interoperable #import Interoperabe
+from dask import bag as db
+import glob
 
 
 def generate_prediction(self,model):
@@ -337,6 +339,71 @@ def recoverable_interuptable_batch_process():
                 pickle.dump(i,f)
             cnt+=1
 
+#import numpy as np
+
+def mid_to_model(mid_):
+    model = get_static_models(mid_)
+    if type(model) is not type(None):
+        model.name = None
+        model.name = str(mid_)
+        with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
+            pickle.dump(model,f)
+    return
+
+def faster_make_model_and_cache():
+    '''
+    Synposis:
+
+        Mass download all the NML model waveforms for all cortical regions
+        And perform three types of feature extraction on resulting waveforms.
+
+    Inputs: None
+    Outputs: None in namespace, yet, lots of data written to pickle.
+    '''
+    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+
+    mid = [] # mid is a list of model identifiers.
+    for k,v in all_the_NML_IDs.items():
+        mid.extend(v[0])
+
+    path_name = str('models')
+    try:
+        os.mkdir(path_name)
+    except:
+        print('model directory already made :)')
+
+    ##
+    # Do the batch model download.
+    ##
+    mid_bag = db.from_sequence(mid,npartitions=8)
+    list(mid_bag.map(mid_to_model).compute())
+
+def model_analysis(model):
+    if type(model) is not type(None):
+        three_feature_sets = three_feature_sets_on_static_models(model)
+        with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
+            pickle.dump(three_feature_sets,f)
+    return
+
+def analyze_models_from_cache(file_paths):
+    models = []
+    for f in file_paths:
+        models.append(pickle.load(open(f,'rb')))
+    models_bag = db.from_sequence(models,npartitions=8)
+    list(models_bag.map(model_analysis).compute())
+
+def faster_feature_extraction():
+    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+    file_paths = glob.glob("models/*.p")
+    if file_paths:
+        if len(file_paths)==len(all_the_NML_IDs):
+            _ = analyze_models_from_cache(file_paths)
+        else:
+            _ = faster_make_model_and_cache()
+    else:
+        _ = faster_make_model_and_cache()
+    file_paths = glob.glob("models/*.p")
+    _ = analyze_models_from_cache(file_paths)
 
 
 
@@ -443,7 +510,8 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     allen_frame.set_index('protocol')
 
 
-
+    print(len(sf.get_spike_train(model.vm30))>1)
+    print(len(sf.get_spike_train(model.vm15))>1)
 
     ##
     # Wrangle data to prepare for EFEL feature calculation.
@@ -451,7 +519,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     trace3 = {}
     trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
     trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
-    trace3['peak_voltage'] = [ np.max(model.vm30) ]
+    #trace3['peak_voltage'] = [ np.max(model.vm30) ]
 
     trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
@@ -460,7 +528,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
     trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
-    trace15['peak_voltage'] = [ np.max(model.vm15) ]
+    #trace15['peak_voltage'] = [ np.max(model.vm15) ]
 
     trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
@@ -503,53 +571,3 @@ def three_feature_sets_on_static_models(model,test_frame = None):
 
 
     return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
-
-recoverable_interuptable_batch_process()
-
-'''
-try:
-    assert 1==2
-    with open('models.p','rb') as f:
-        models = pickle.load(f)
-
-except:
-'''
-'''
-list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
-    str('https://www.neuroml-db.org/api/search?q=markram'),
-    str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
-
-
-all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
-
-lll = []
-for v in all_the_NML_IDs.values():
-    lll.extend(v[0])
-
-for mid in lll[0:2]:
-    print(mid)
-    model = get_static_models(mid)
-    if type(model) is not type(None):
-        three_feature_sets = three_feature_sets_on_static_models(model)
-    print(three_feature_sets)
-    print('gets here')
-    with open('models.p','wb') as f:
-        pickle.dump(models,f)
-
-
-
-
-
-
-def plot_all(temps):
-    for temp in temps:
-        temp_vm = list(map(float, temp['Variable_Values'].split(',')))
-        temp['easy_Times'] = list(map(float,temp['Times'].split(',')))
-
-        dt = temp['easy_Times'][1]- temp['easy_Times'][0]
-        temp['dt'] = dt
-
-        temp['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-        plt.plot(temp['vm'].times,temp['vm'].magnitude)#,label='ground truth')
-    return temps
-'''
