@@ -346,7 +346,7 @@ def mid_to_model(mid_):
     if type(model) is not type(None):
         model.name = None
         model.name = str(mid_)
-        with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
+        with open(str('models')+str('/')+str(mid_)+'.p','wb') as f:
             pickle.dump(model,f)
     return
 

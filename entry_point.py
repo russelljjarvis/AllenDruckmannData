@@ -1,4 +1,4 @@
-import get_allen_features_from_neuroml_db as runnable
+import get_allen_features_from_nml_db as runnable
 
 ##
 # The slow old way
