@@ -1,0 +1,19 @@
+# Set the build language to Python
+language: python
+
+# Set the python version
+python: "3.5"
+services:
+  - docker
+
+# get data from open science frame work.
+# get a prebuilt docker environment that supports this work.
+before_install:
+  - docker pull russelljarvis/efel_allen_dm
+  - git clone -b barcelona https://github.com/russelljjarvis/neuronunit.git
+
+
+# Run the unit test
+script:
+# show that running the docker container at least works.
+  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python $HOME/work/allendata/get_allen_features_from_nml_db.py                                                                                             |
