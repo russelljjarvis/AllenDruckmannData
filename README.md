@@ -5,6 +5,9 @@
 # Apply 3 feature extraction protocols to the same NeuroML-DB static waveforms.
 ##
 
+This repository contains:
+a script that downloads NML-DB waveform data, and uses this data to instantiate appropriate NML-static models to do feature extraction with using three of the biggest feature extraction suites.
+
 A notebook is defined that acts on loaded per static modle pickle files.
 Each file name is determined by an allen cell id.
 
