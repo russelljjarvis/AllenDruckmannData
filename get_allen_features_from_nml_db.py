@@ -45,21 +45,6 @@ import pdb
 
 from collections import Iterable, OrderedDict
 
-#import quantities as qt
-#qt = pq
-#from neuronunit.optimisation import get_neab
-
-#from neuronunit.optimisation.optimisation_management import switch_logic#, active_values
-# from neuronunit.optimisation.optimisation_management import init_dm_tests
-
-#try:
-#    from optimisation.optimisation_management import add_druckmann_properties_to_cells as dm
-#except:
-# from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells as dm
-
-# from neuronunit.optimisation.optimisation_management import inject_rh_and_dont_plot
-#from neuronunit.capabilities.spike_functions import get_spike_waveforms
-
 import numpy as np
 import efel
 import pickle
@@ -67,8 +52,8 @@ from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import matplotlib.pyplot as plt
-#import ssl
-#ssl._create_default_https_context = ssl._create_unverified_context
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
 import dm_test_interoperable #import Interoperabe
 
@@ -272,7 +257,6 @@ def allen_format(volts,times):
                 meaned_features_overspikes[s] = None #np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
                 print(meaned_features_overspikes)
 
-    #per_spike_info = spikes
     frame_shape = pd.Series(meaned_features_1).to_frame()
     frame_dynamics = pd.Series(meaned_features_overspikes).to_frame()
     frame_shape.append(frame_dynamics)
@@ -378,6 +362,7 @@ def more_challenging(model):
     efel_results_inh = efel.getFeatureValues(trace_ephys_props,list(efel.getFeatureNames()))#
     efel_results_ephys = efel.getFeatureValues(trace_ephys_prop,list(efel.getFeatureNames()))#
     return efel_results_inh
+
 def not_necessary_for_program_completion(DMTNMLO):
     '''
     Synopsis:
