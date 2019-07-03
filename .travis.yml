@@ -16,4 +16,5 @@ before_install:
 # Run the unit test
 script:
 # show that running the docker container at least works.
-  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python $HOME/work/allendata/small_travis_run.py 
+  - docker run russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
+  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py 
