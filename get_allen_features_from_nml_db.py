@@ -1,14 +1,30 @@
-# Obtains the cell threshold, rheobase, resting v, and bias currents for
-# steady state v of a cell defined in a hoc file in the given directory.
-# Usage: python getCellProperties /path/To/dir/with/.hoc
-#from neuronunit.tests.druckmann2013 import *
-
 
 ##
+#  The main method that does the aligned feature extraction is down the bottom.
+# Two thirds of this file, it is called
+# def three_feature_sets_on_static_models
+##
+
+##
+# docker pull russelljarvis/efel_allen_dm
+# I build it with the name russelljarvis/efel_allen_dm.
 # This uses the docker file in this directory.
 # I build it with the name efl.
 # and launch it with this alias.
 # alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata efel /bin/bash'
+##
+
+##
+# This is how my travis script builds and runs:
+# before_install:
+# - docker pull russelljarvis/efel_allen_dm
+# - git clone -b barcelona https://github.com/russelljjarvis/neuronunit.git
+#
+# Run the unit test
+# script:
+# show that running the docker container at least works.
+#  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
+#
 ##
 
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
@@ -54,7 +70,7 @@ import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
-from neuronunit.capabilities import spike_functions as sf
+
 import dm_test_interoperable #import Interoperabe
 from dask import bag as db
 import glob
@@ -110,6 +126,27 @@ def map_to_sms(tt):
             t.generate_prediction = MethodType(generate_prediction,t)
     return sms
 
+def standard_nu_tests_two(model):
+    '''
+    Do standard NU predictions, to do this may need to overwrite generate_prediction
+    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    with methods for querying a lookup table, such that given a current injection,
+    a V_{m} is returned.
+    '''
+    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
+    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+    #model = update_static_model_methods(model,lookup)
+    nu_preds = []
+    for t in local_tests:
+        if str('Rheobase') not in t.name:
+            #import pdb; pdb.set_trace()
+            try:
+                pred = t.generate_prediction(model)
+            except:
+                pred = None
+        nu_preds.append(pred)
+    return nu_preds
+
 
 def standard_nu_tests(model,lookup):
     '''
@@ -123,7 +160,7 @@ def standard_nu_tests(model,lookup):
     model = update_static_model_methods(model,lookup)
     nu_preds = []
     for t in local_tests:
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         try:
             pred = t.generate_prediction(model)
         except:
@@ -263,6 +300,7 @@ def allen_format(volts,times):
 
 
     spikes = swp.spikes()
+
     meaned_features_1 = {}
     skeys = [ skey for skey in spikes[0].keys() ]
     for sk in skeys:
@@ -270,12 +308,12 @@ def allen_format(volts,times):
             meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
 #
 
-    #allen_features = {}
+    allen_features = {}
     meaned_features_overspikes = {}
+    for s in swp.sweep_feature_keys():# print(swp.sweep_feature(s))
 
-    for s in swp.sweep_feature_keys():
         if str('isi_type') not in s:
-            #allen_features[s] = swp.sweep_feature(s)
+            allen_features[s] = swp.sweep_feature(s)
             try:
                 feature = swp.sweep_feature(s)
                 if isinstance(feature, Iterable):
@@ -286,16 +324,137 @@ def allen_format(volts,times):
             except:
                 meaned_features_overspikes[s] = None #np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
                 print(meaned_features_overspikes)
+    for s in swp.sweep_feature_keys():
+        print(swp.sweep_feature(s))
+
+    #import pdb; pdb.set_trace()
 
     frame_shape = pd.Series(meaned_features_1).to_frame()
     frame_dynamics = pd.Series(meaned_features_overspikes).to_frame()
-    frame_shape.append(frame_dynamics)
-    return frame_shape
+    final = frame_shape.append(frame_dynamics)
+    return final, frame_dynamics, allen_features
+
+
+def three_feature_sets_on_static_models(model,test_frame = None):
+    '''
+    Conventions:
+        variables ending with 15 refer to 1.5 current injection protocols.
+        variables ending with 30 refer to 3.0 current injection protocols.
+    Inputs:
+        NML-DB models, a method designed to be called inside an iteration loop, where a list of
+        models is iterated over, and on each iteration a new model is supplied to this method.
+
+    Outputs:
+        A dictionary of dataframes, for features sought according to: Druckman, EFEL, AllenSDK
+
+    '''
+
+    ##
+    # wrangle data in preperation for computing
+    # Allen Features
+    ##
+
+
+    times = np.array([float(t) for t in model.vm30.times])
+    volts = np.array([float(v) for v in model.vm30])
+
+
+    ##
+    # Allen Features
+    ##
+    #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
+    frame30, frame_dynamics, allen_features = allen_format(volts,times)
+    #import pdb; pdb.set_trace()
+    frame30['protocol'] = 3.0
+
+    ##
+    # wrangle data in preperation for computing
+    # Allen Features
+    ##
+
+    times = np.array([float(t) for t in model.vm15.times])
+    volts = np.array([float(v) for v in model.vm15])
+
+    ##
+    # Allen Features
+    ##
+
+    frame15, frame_dynamics, allen_features = allen_format(volts,times)
+    #import pdb; pdb.set_trace()
+
+    frame15['protocol'] = 1.5
+    allen_frame = frame30.append(frame15)
+    #allen_frame.set_index('protocol')
+
+    #print(len(sf.get_spike_train(model.vm30))>1)
+    #print(len(sf.get_spike_train(model.vm15))>1)
+
+    ##
+    # Wrangle data to prepare for EFEL feature calculation.
+    ##
+    trace3 = {}
+    trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
+    trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
+    #trace3['peak_voltage'] = [ np.max(model.vm30) ]
+
+    trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
+    trace3['stim_end'] = [ trace3['T'][-1] ]
+    traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    trace15 = {}
+    trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
+    trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
+    #trace15['peak_voltage'] = [ np.max(model.vm15) ]
+
+    trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
+    trace15['stim_end'] = [ trace15['T'][-1] ]
+    traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    ##
+    # Compute
+    # EFEL features (HBP)
+    ##
+
+    efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+    efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
+    # efel_results_inh = more_challenging(model)
+
+
+    df15 = pd.DataFrame(efel_results15)
+    #import pdb; pdb.set_trace()
+    df15['protocol'] = 1.5
+
+    df30 = pd.DataFrame(efel_results30)
+    df30['protocol'] = 3.0
+
+    efel_frame = df15.append(df30)
+    #efel_frame.set_index('protocol')
+
+
+    ##
+    # Get Druckman features, this is mainly handled in external files.
+    ##
+    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO.test_setup(None,None,model= model)
+    dm_test_features = DMTNMLO.runTest()
+
+    dm_frame = pd.DataFrame(dm_test_features)
+    #nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
+    #import pdb; pdb.set_trace()
+    ##
+    # sort of a bit like unit testing, but causes a dowload which slows everything down:
+    ##
+    # assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
+    # _ = not_necessary_for_program_completion(DMTNMLO)
+
+
+    return {'model_id':model.name,'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
+
 
 def recoverable_interuptable_batch_process():
     '''
     Synposis:
-
+        slower serial mode but debug friendly and simple
         Mass download all the NML model waveforms for all cortical regions
         And perform three types of feature extraction on resulting waveforms.
 
@@ -332,6 +491,9 @@ def recoverable_interuptable_batch_process():
             until_done = len(mid[index:-1])
             model = get_static_models(mid_)
             if type(model) is not type(None):
+            #if type(model) is not type(None):
+                model.name = None
+                model.name = str(mid_)
                 three_feature_sets = three_feature_sets_on_static_models(model)
                 with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
                     pickle.dump(three_feature_sets,f)
@@ -381,8 +543,13 @@ def faster_make_model_and_cache():
 def model_analysis(model):
     if type(model) is not type(None):
         three_feature_sets = three_feature_sets_on_static_models(model)
-        with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
-            pickle.dump(three_feature_sets,f)
+        try:
+            assert type(model.name) is not None
+            with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
+                pickle.dump(three_feature_sets,f)
+        except:
+            print('big error')
+            import pdb; pdb.set_trace()
     return
 
 def analyze_models_from_cache(file_paths):
@@ -452,122 +619,3 @@ def not_necessary_for_program_completion(DMTNMLO):
     temp1 = np.mean(volt30)
     assert temp0 != temp1
     return
-
-def three_feature_sets_on_static_models(model,test_frame = None):
-    '''
-    Conventions:
-        variables ending with 15 refer to 1.5 current injection protocols.
-        variables ending with 30 refer to 3.0 current injection protocols.
-    Inputs:
-        NML-DB models, a method designed to be called inside an iteration loop, where a list of
-        models is iterated over, and on each iteration a new model is supplied to this method.
-
-    Outputs:
-        A dictionary of dataframes, for features sought according to: Druckman, EFEL, AllenSDK
-
-    '''
-    '''
-    TODO get NU tests working
-    #try:
-    lookup = {}
-    lookup[str(model.druckmann2013_input_resistance_currents[0])] = model.vminh
-    lookup[str(model.druckmann2013_standard_current)] = model.vm15
-    lookup[str(model.druckmann2013_strong_current)] = model.vm30
-    nu_preds = standard_nu_tests(model,lookup)
-    '''
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-
-    times = np.array([float(t) for t in model.vm30.times])
-    volts = np.array([float(v) for v in model.vm30])
-
-
-    ##
-    # Allen Features
-    ##
-    #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    frame30 = allen_format(volts,times)
-    frame30['protocol'] = 3.0
-
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-    times = np.array([float(t) for t in model.vm15.times])
-    volts = np.array([float(v) for v in model.vm15])
-
-    ##
-    # Allen Features
-    ##
-
-    frame15 = allen_format(volts,times)
-    frame15['protocol'] = 1.5
-    allen_frame = frame30.append(frame15)
-    allen_frame.set_index('protocol')
-
-
-    print(len(sf.get_spike_train(model.vm30))>1)
-    print(len(sf.get_spike_train(model.vm15))>1)
-
-    ##
-    # Wrangle data to prepare for EFEL feature calculation.
-    ##
-    trace3 = {}
-    trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
-    trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
-    #trace3['peak_voltage'] = [ np.max(model.vm30) ]
-
-    trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
-    trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
-    trace3['stim_end'] = [ trace3['T'][-1] ]
-    traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    trace15 = {}
-    trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
-    trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
-    #trace15['peak_voltage'] = [ np.max(model.vm15) ]
-
-    trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
-    trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
-    trace15['stim_end'] = [ trace15['T'][-1] ]
-    traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    ##
-    # Compute
-    # EFEL features (HBP)
-    ##
-
-    efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
-    efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-    # efel_results_inh = more_challenging(model)
-
-
-    df15 = pd.DataFrame(efel_results15)
-    #import pdb; pdb.set_trace()
-    df15['protocol'] = 1.5
-
-    df30 = pd.DataFrame(efel_results30)
-    df30['protocol'] = 3.0
-
-    efel_frame = df15.append(df30)
-    efel_frame.set_index('protocol')
-
-
-    ##
-    # Get Druckman features, this is mainly handled in external files.
-    ##
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
-    DMTNMLO.test_setup(None,None,model= model)
-    dm_test_features = DMTNMLO.runTest()
-    dm_frame = pd.DataFrame(dm_test_features)
-
-    ##
-    # sort of a bit like unit testing:
-    ##
-    assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
-    _ = not_necessary_for_program_completion(DMTNMLO)
-
-
-    return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
