@@ -6,7 +6,6 @@ python: "3.5"
 services:
   - docker
 
-# get data from open science frame work.
 # get a prebuilt docker environment that supports this work.
 before_install:
   - docker pull russelljarvis/efel_allen_dm
@@ -15,6 +14,6 @@ before_install:
 
 # Run the unit test
 script:
-# show that running the docker container at least works.
+# show that running the docker container at runs the core program elements in a small batch job.
   - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
   
