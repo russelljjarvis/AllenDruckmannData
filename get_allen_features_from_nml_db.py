@@ -64,13 +64,13 @@ def generate_prediction(self,model):
     prediction['std'] = 1.0
     prediction['mean'] = model.rheobase['mean']
     return prediction
-
+'''
 def find_nearest(array, value):
     #value = float(value)
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
-
+'''
 def get_m_p(model,current):
     '''
     synopsis:
@@ -80,9 +80,13 @@ def get_m_p(model,current):
 
 
     '''
-    return model.lookup[float(current['amplitude'])]
+    try:
+        consolted = model.lookup[float(current['amplitude'])]
+    except:
+        consolted = model.lookup[float(current['injected_square_current']['amplitude'])]
+    return consolted
 
-def update_static_model_methods(model,test_frame,lookup):
+def update_static_model_methods(model,lookup):
     '''
     Overwrite/ride. a NU models inject_square_current,generate_prediction methods
     with methods for querying a lookup table, such that given a current injection,
@@ -90,17 +94,41 @@ def update_static_model_methods(model,test_frame,lookup):
     '''
     model.lookup = lookup
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-    test_frame[0][0][0].generate_prediction = MethodType(generate_prediction,test_frame[0][0][0])
-    return model, test_frame
 
-def map_to_sms(sms):
-    '''
-    given a list of static models, update the static models methods
-    '''
-    for model in sms:
-        model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-    tt[0].generate_prediction = MethodType(generate_prediction,tt[0])
+    return model#, tests
+
+#Depreciated
+def map_to_sms(tt):
+
+    # given a list of static models, update the static models methods
+    #for model in sms:
+    #model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
+    for t in tt:
+        if 'RheobaseTest' in t.name:
+            t.generate_prediction = MethodType(generate_prediction,t)
     return sms
+
+
+def standard_nu_tests(model,lookup):
+    '''
+    Do standard NU predictions, to do this may need to overwrite generate_prediction
+    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    with methods for querying a lookup table, such that given a current injection,
+    a V_{m} is returned.
+    '''
+    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
+    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+    model = update_static_model_methods(model,lookup)
+    nu_preds = []
+    for t in local_tests:
+        import pdb; pdb.set_trace()
+        try:
+            pred = t.generate_prediction(model)
+        except:
+            pred = None
+        nu_preds.append(pred)
+    return nu_preds
+
 
 def crawl_ids(url):
     ''' move to aibs '''
@@ -312,26 +340,6 @@ def recoverable_interuptable_batch_process():
 
 
 
-def standard_nu_tests(model,lookup):
-	'''
-	Do standard NU predictions, to do this may need to overwrite generate_prediction
-	Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-	with methods for querying a lookup table, such that given a current injection,
-	a V_{m} is returned.
-	'''
-	model, test_frame = update_static_model_methods(model,test_frame,lookup)
-	rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-	local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-	nu_preds = []
-	for t in local_tests:
-	    try:
-		    pred = t.generate_prediction(model)
-	    except:
-		    pred = None
-	    nu_preds.append(pred)
-	return nu_preds
-
-
 def more_challenging(model):
     '''
     Isolate harder code, still wrangling data types.
@@ -391,6 +399,15 @@ def three_feature_sets_on_static_models(model,test_frame = None):
         A dictionary of dataframes, for features sought according to: Druckman, EFEL, AllenSDK
 
     '''
+    '''
+    TODO get NU tests working
+    #try:
+    lookup = {}
+    lookup[str(model.druckmann2013_input_resistance_currents[0])] = model.vminh
+    lookup[str(model.druckmann2013_standard_current)] = model.vm15
+    lookup[str(model.druckmann2013_strong_current)] = model.vm30
+    nu_preds = standard_nu_tests(model,lookup)
+    '''
     ##
     # wrangle data in preperation for computing
     # Allen Features
@@ -425,12 +442,6 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     allen_frame = frame30.append(frame15)
     allen_frame.set_index('protocol')
 
-    #try:
-    lookup = {}
-    lookup[str(model.druckmann2013_input_resistance_currents[0])] = model.vminh
-    lookup[str(model.druckmann2013_standard_current)] = model.vm15
-    lookup[str(model.druckmann2013_strong_current)] = model.vm30
-    # nu_preds = standard_nu_tests(model,lookup)
 
 
 
