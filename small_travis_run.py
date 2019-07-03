@@ -5,10 +5,24 @@
 
 
 ##
+# docker pull russelljarvis/efel_allen_dm
+# I build it with the name russelljarvis/efel_allen_dm.
 # This uses the docker file in this directory.
-# I build it with the name efl.
 # and launch it with this alias.
 # alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata efel /bin/bash'
+##
+
+##
+# This is how my travis script builds and runs:
+# before_install:
+# - docker pull russelljarvis/efel_allen_dm
+# - git clone -b barcelona https://github.com/russelljjarvis/neuronunit.git
+#
+# Run the unit test
+# script:
+# show that running the docker container at least works.
+#  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
+#  
 ##
 
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
