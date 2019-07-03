@@ -502,7 +502,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     _ = not_necessary_for_program_completion(DMTNMLO)
 
 
-    return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame,'allen_spike_data':(per_spike_info_15,per_spike_info_30)}
+    return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
 
 recoverable_interuptable_batch_process()
 
