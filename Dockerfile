@@ -14,7 +14,6 @@ USER $NB_USER
 # RUN pip uninstall tornado
 # move to a docker install script.
 RUN sudo /opt/conda/bin/pip install --upgrade pip
-# RUN sudo /opt/conda/bin/pip install git+https://github.com/scidash/sciunit.git@dev # --upgrade# --process-dependency-links --upgrade
 RUN sudo /opt/conda/bin/conda install -y cython
 
 RUN sudo /opt/conda/bin/pip install git+https://github.com/brian-team/brian2.git
@@ -59,6 +58,7 @@ RUN sudo /opt/conda/bin/conda install numpy jupyter
 RUN sudo /opt/conda/bin/pip install cloudpickle deap toolz lazyarray neurodynex
 RUN sudo /opt/conda/bin/conda remove cloudpickle
 RUN sudo /opt/conda/bin/pip install git+git://github.com/russelljjarvis/neuronunit.git@barcelona
+RUN sudo /opt/conda/bin/pip install git+https://github.com/scidash/sciunit.git@dev # --upgrade# --process-dependency-links --upgrade
 
 # RUN sudo /opt/conda/bin/pip install git+https://github.com/scidash/sciunit.git@dev 
 WORKDIR $HOME/work
