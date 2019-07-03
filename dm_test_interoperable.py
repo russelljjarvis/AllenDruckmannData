@@ -9,7 +9,11 @@ Which seemed to work really well with a static NU backend.
 import unittest
 import pickle
 import quantities as pq
-from neuronunit.tests.druckman2013 import *
+try:
+    from neuronunit.tests.druckmann2013 import *
+except:
+    from neuronunit.tests.druckman2013 import *
+    
 from neuronunit.neuromldb import NeuroMLDBStaticModel
 from numpy import array
 from quantities import *

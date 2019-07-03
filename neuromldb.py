@@ -26,6 +26,9 @@ class NeuroMLDBModel(object):
 
     def read_api_url(self, url):
         if url not in self.url_responses:
+            ##
+            # works on linux but not OSX
+            ##
             response = urllib.urlopen(url).read()
 
             if sys.version_info[0] >= 3:

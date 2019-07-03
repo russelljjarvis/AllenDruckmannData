@@ -38,24 +38,30 @@ from neo.core import AnalogSignal
 from quantities import mV, ms, nA
 from neuronunit import models
 import pickle
-from neuronunit.optimisation import get_neab
-#from neuronunit.optimisation.optimisation_management import switch_logic#, active_values
 import efel
 from types import MethodType
-from neuronunit.optimisation.optimisation_management import init_dm_tests
-import quantities as qt
 import quantities as pq
-qt = pq
 import pdb
+
+from collections import Iterable, OrderedDict
+
+#import quantities as qt
+#qt = pq
+#from neuronunit.optimisation import get_neab
+
+#from neuronunit.optimisation.optimisation_management import switch_logic#, active_values
+# from neuronunit.optimisation.optimisation_management import init_dm_tests
+
 #try:
 #    from optimisation.optimisation_management import add_druckmann_properties_to_cells as dm
 #except:
-from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells as dm
+# from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells as dm
 
-from neuronunit.optimisation.optimisation_management import inject_rh_and_dont_plot
+# from neuronunit.optimisation.optimisation_management import inject_rh_and_dont_plot
+#from neuronunit.capabilities.spike_functions import get_spike_waveforms
+
 import numpy as np
 import efel
-from neuronunit.capabilities.spike_functions import get_spike_waveforms
 import pickle
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd
@@ -239,42 +245,38 @@ def allen_format(volts,times):
     ext.process_spikes()
 
     swp = ext.sweeps()[0]
-    spikes = swp.spikes()
-    middle_spike_index = int(len(spikes)/2.0)
-    #midle_spike_info = pd.DataFrame(spikes[middle_spike_index])
-    #
-    #
 
-    #allen_features = spikes
-    #spike_keys = swp.spike_feature_keys()
-    #swp_keys = swp.sweep_feature_keys()
-    allen_features = {}
+
+    spikes = swp.spikes()
+    meaned_features_1 = {}
+    skeys = [ skey for skey in spikes[0].keys() ]
+    for sk in skeys:
+        if str('isi_type') not in sk:
+            meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
+#
+
+    #allen_features = {}
     meaned_features_overspikes = {}
 
     for s in swp.sweep_feature_keys():
-        allen_features[s] = swp.sweep_feature(s)
         if str('isi_type') not in s:
+            #allen_features[s] = swp.sweep_feature(s)
             try:
-                if len(swp.spike_feature(s))>1:
-                    #assert swp.spike_feature(s)
-                    meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+                feature = swp.sweep_feature(s)
+                if isinstance(feature, Iterable):
+                    meaned_features_overspikes[s] = np.mean([i for i in feature if type(i) is not type(str(''))])
                 else:
-                    meaned_features_overspikes[s] = swp.sweep_feature(s)
+                    meaned_features_overspikes[s] = feature
 
             except:
                 meaned_features_overspikes[s] = None #np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
                 print(meaned_features_overspikes)
-                import pdb
-                pdb.set_trace()
 
-    per_spike_info = spikes
-    try:
-        frame = pd.DataFrame(allen_features)
-    except:
-        frame = allen_features
-
-    meaned_features_overspikes = pd.DataFrame(meaned_features_overspikes)
-    return allen_features,frame,per_spike_info, meaned_features_overspikes
+    #per_spike_info = spikes
+    frame_shape = pd.Series(meaned_features_1).to_frame()
+    frame_dynamics = pd.Series(meaned_features_overspikes).to_frame()
+    frame_shape.append(frame_dynamics)
+    return frame_shape
 
 def recoverable_interuptable_batch_process():
     '''
@@ -361,6 +363,10 @@ def more_challenging(model):
 
     single_spike = [single_spike]
 
+
+    ##
+    # How EFEL could learn about input resistance of model
+    ##
     trace_ephys_prop = {}
     trace_ephys_prop['stimulus_current'] = model.druckmann2013_input_resistance_currents[0]# = druckmann2013_input_resistance_currents[0]
     trace_ephys_prop['V'] = [ float(v) for v in model.vminh ]
@@ -371,7 +377,21 @@ def more_challenging(model):
 
     efel_results_inh = efel.getFeatureValues(trace_ephys_props,list(efel.getFeatureNames()))#
     efel_results_ephys = efel.getFeatureValues(trace_ephys_prop,list(efel.getFeatureNames()))#
-
+    return efel_results_inh
+def not_necessary_for_program_completion(DMTNMLO):
+    '''
+    Synopsis:
+       Not necessary for feature extraction pipe line.
+       More of a unit test.
+    '''
+    standard_current = DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()
+    strong_current = DMTNMLO.model.nmldb_model.get_druckmann2013_strong_current()
+    volt15 = DMTNMLO.model.nmldb_model.get_waveform_by_current(standard_current)
+    volt30 = DMTNMLO.model.nmldb_model.get_waveform_by_current(strong_current)
+    temp0 = np.mean(volt15)
+    temp1 = np.mean(volt30)
+    assert temp0 != temp1
+    return
 
 def three_feature_sets_on_static_models(model,test_frame = None):
     '''
@@ -387,6 +407,49 @@ def three_feature_sets_on_static_models(model,test_frame = None):
 
     '''
     ##
+    # wrangle data in preperation for computing
+    # Allen Features
+    ##
+
+
+    times = np.array([float(t) for t in model.vm30.times])
+    volts = np.array([float(v) for v in model.vm30])
+
+
+    ##
+    # Allen Features
+    ##
+    #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
+    frame30 = allen_format(volts,times)
+    frame30['protocol'] = 3.0
+
+    ##
+    # wrangle data in preperation for computing
+    # Allen Features
+    ##
+
+    times = np.array([float(t) for t in model.vm15.times])
+    volts = np.array([float(v) for v in model.vm15])
+
+    ##
+    # Allen Features
+    ##
+
+    frame15 = allen_format(volts,times)
+    frame15['protocol'] = 1.5
+    allen_frame = frame30.append(frame15)
+    allen_frame.set_index('protocol')
+
+    #try:
+    lookup = {}
+    lookup[str(model.druckmann2013_input_resistance_currents[0])] = model.vminh
+    lookup[str(model.druckmann2013_standard_current)] = model.vm15
+    lookup[str(model.druckmann2013_strong_current)] = model.vm30
+    # nu_preds = standard_nu_tests(model,lookup)
+
+
+
+    ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
     trace3 = {}
@@ -397,7 +460,6 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
     trace3['stim_end'] = [ trace3['T'][-1] ]
-    #trace0['decay_end_after_stim'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
     traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
@@ -407,7 +469,6 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
     trace15['stim_end'] = [ trace15['T'][-1] ]
-    #trace0['decay_end_after_stim'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
     traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
     ##
     # Compute
@@ -416,7 +477,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
 
     efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
     efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-
+    # efel_results_inh = more_challenging(model)
 
 
     df15 = pd.DataFrame(efel_results15)
@@ -438,70 +499,12 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     dm_test_features = DMTNMLO.runTest()
     dm_frame = pd.DataFrame(dm_test_features)
 
-    def not_necessary_for_program_completion(DMTNMLO):
-        current = DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()
-        DMTNMLO.model.nmldb_model.get_waveform_by_current(current)
-        temp0 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_strong_current()))
-        temp1 = np.mean(DMTNMLO.model.nmldb_model.get_waveform_by_current(DMTNMLO.model.nmldb_model.get_druckmann2013_standard_current()))
-        assert temp0 != temp1
-        return
-    _ = not_necessary_for_program_completion(DMTNMLO)    
-    #import pdb; pdb.set_trace()
-    #standard = DMTNMLO..get_druckmann2013_standard_current()
-    #strong = DMTNMLO.nmldb_model.get_druckmann2013_strong_current()
-    #ir_currents = DMTNMLO.model.nmldb_model.get_druckmann2013_input_resistance_currents()
-
-
+    ##
+    # sort of a bit like unit testing:
+    ##
     assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
+    _ = not_necessary_for_program_completion(DMTNMLO)
 
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-
-    times = np.array([float(t) for t in model.vm30.times])
-    volts = np.array([float(v) for v in model.vm30])
-
-
-    ##
-    # Allen Features
-    ##
-
-    allen_features,frame30, mfos30 = allen_format(volts,times)
-    frame30['protocol'] = 3.0
-
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-    times = np.array([float(t) for t in model.vm15.times])
-    volts = np.array([float(v) for v in model.vm15])
-
-    ##
-    # Allen Features
-    ##
-
-    allen_features,frame15, mfos15 = allen_format(volts,times)
-    frame15['protocol'] = 1.5
-    allen_frame = frame30.append(frame15)
-    allen_frame.set_index('protocol')
-
-    #try:
-    lookup = {}
-    lookup[model.druckmann2013_input_resistance_currents[0]] = model.vminh
-    lookup[model.druckmann2013_standard_current] = model.vm15
-    lookup[ model.druckmann2013_strong_current ] = model.vm30
-    nu_preds = standard_nu_tests(model,lookup)
-
-
-
-    #   print(nu_preds)
-
-    #except:
-    #    print('standard nu tests failed.')
-    #import pdb; pdb.set_trace()
 
     return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame,'allen_spike_data':(per_spike_info_15,per_spike_info_30)}
 
