@@ -76,19 +76,59 @@ from dask import bag as db
 import glob
 
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+mpl.use('agg')
+#import logging
+#logging.info("test")
+from allensdk.core.cell_types_cache import CellTypesCache
+from allensdk.ephys.extract_cell_features import extract_cell_features
+from collections import defaultdict
+#from neuronunit.optimisation.optimisation_management import inject_rh_and_dont_plot, add_dm_properties_to_cells
+
+from allensdk.core.nwb_data_set import NwbDataSet
+import pickle
+
+import aibs
+
+#dm_tests = init_dm_tests(value,1.5*value)
+
+#try:
+#    ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
+#except:#
+#    pass#
+#    all_features = ctc.get_all_features()
+#    pickle.dump(all_features,open('all_features.p','wb'))
+#
+
+
+
+
+
+'''
+import pdb; pdb.set_trace()
+prefix = str('/dedicated_folder')
+try:
+    os.mkdir(prefix)
+except:
+    pass
+pickle.dump(everything,open(prefix+str(specimen_id)+'.p','wb'))
+'''
+
 def generate_prediction(self,model):
     prediction = {}
     prediction['n'] = 1
     prediction['std'] = 1.0
     prediction['mean'] = model.rheobase['mean']
     return prediction
-'''
+
 def find_nearest(array, value):
     #value = float(value)
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
-'''
+
 def get_m_p(model,current):
     '''
     synopsis:
@@ -210,309 +250,229 @@ def find_nearest(array, value):
 def get_waveform_current_amplitude(waveform):
     return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
 
+def inject_square_current(model,current,data_set=None):
+    '''
+    model, data_set is basically like a lookup table.
+    '''
+    if type(current) is type({}):
+        current = float(current['amplitude'])
+    if data_set == None:
+        data_set = model.data_set
+        sweeps = model.sweeps
+    numbers = data_set.get_sweep_numbers()
+    injections = [ np.max(data_set.get_sweep(sn)['stimulus']) for sn in numbers ]
+    sns = [ sn for sn in numbers]
+    print([s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')])
+    #sm.sweeps
+    import pdb; pdb.set_trace()
+    (nearest,idx) = find_nearest(injections,current)
+    index = np.asarray(numbers)[idx]
+    sweep_data = data_set.get_sweep(index)
+    temp_vm = sweep_data['response']
+    injection = sweep_data['stimulus']
+    sampling_rate = sweep_data['sampling_rate']
+    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    model._vm = vm
+    return model._vm
 
-def get_static_models(cell_id):
+def get_membrane_potential(model):
+    return model._vm
+
+"""Auxiliary helper functions for analysis of spiking."""
+
+def get_spike_train(vm, threshold=0.0*mV):
     """
-    Inputs: NML-DB cell ids, a method designed to be called inside an iteration loop.
-
-    Synpopsis: given a NML-DB id, query nml-db, create a NMLDB static model based on wave forms
-        obtained for that NML-ID.
-        get mainly just waveforms, and current injection values relevant to performing druckman tests
-        as well as a rheobase value for good measure.
-        Update the NML-DB model objects attributes, with all the waveform data/injection values obtained for the appropriate cell IDself.
-    """
-
-
-    url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-    model_contents = requests.get(url)
-    model_contents = json.loads(model_contents.text)
-    model = NeuroMLDBStaticModel(cell_id)
-
-    wlist = model_contents['waveform_list']
-    long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
-    applied_current_injections = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Current" ]
-    currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
-    in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
-    rheobases = []
-    for wl in long_squares:
-        wid = wl['ID']
-        url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
-        waves = requests.get(url)
-        temp = json.loads(waves.text)
-        if temp['Spikes'] >= 1:
-            rheobases.append(temp)
-    if len(rheobases) == 0:
-        return None
-
-    in_current = []
-    for check in in_current_filter:
-        amp = get_waveform_current_amplitude(check)
-        if amp < 0 * pq.nA:
-            in_current.append(amp)
-    rheobase_current = get_waveform_current_amplitude(rheobases[0])
-    druckmann2013_standard_current = get_waveform_current_amplitude(currents[-2])
-    druckmann2013_strong_current = get_waveform_current_amplitude(currents[-1])
-    druckmann2013_input_resistance_currents = in_current
-    model.waveforms = wlist
-    model.protocol = {}
-    model.protocol['Time_Start'] = currents[-2]['Time_Start']
-    model.protocol['Time_End'] = currents[-2]['Time_End']
-    model.inh_protocol = {}
-    model.inh_protocol['Time_End'] = in_current_filter[0]['Time_End']
-    model.inh_protocol['Time_Start'] = in_current_filter[0]['Time_Start']
-    model.druckmann2013_input_resistance_currents = druckmann2013_input_resistance_currents
-
-    model.rheobase_current = rheobase_current
-    model.druckmann2013_standard_current = druckmann2013_standard_current
-    model.druckmann2013_strong_current = druckmann2013_strong_current
-    current = {}
-    current['amplitude'] = rheobase_current
-    model.vm_rheobase = model.inject_square_current(current)
-    current['amplitude'] = druckmann2013_standard_current
-    model.vm15 = model.inject_square_current(current)
-    current['amplitude'] = druckmann2013_strong_current
-    model.vm30 = model.inject_square_current(current)
-    current['amplitude'] = druckmann2013_input_resistance_currents[0]
-    model.vminh =  model.inject_square_current(current)
-    return model
-
-def allen_format(volts,times):
-    '''
-    Synposis:
-        At its most fundamental level, AllenSDK still calls a single trace a sweep.
-        In otherwords there are no single traces, but there are sweeps of size 1.
-        This is a bit like wrapping unitary objects in iterable containers like [times].
-
-    inputs:
-        np.arrays of time series: Specifically a time recording vector, and a membrane potential recording.
-        in floats probably with units striped away
-    outputs:
-        a data frame of Allen features, a very big dump of features as they pertain to each spike in a train.
-
-        to get a managable data digest
-        we out put features from the middle spike of a spike train.
-
-    '''
-    ext = EphysSweepSetFeatureExtractor([times],[volts])
-    ext.process_spikes()
-
-    swp = ext.sweeps()[0]
-
-
-    spikes = swp.spikes()
-
-    meaned_features_1 = {}
-    skeys = [ skey for skey in spikes[0].keys() ]
-    for sk in skeys:
-        if str('isi_type') not in sk:
-            meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
-#
-
-    allen_features = {}
-    meaned_features_overspikes = {}
-    for s in swp.sweep_feature_keys():# print(swp.sweep_feature(s))
-
-        if str('isi_type') not in s:
-            allen_features[s] = swp.sweep_feature(s)
-            try:
-                feature = swp.sweep_feature(s)
-                if isinstance(feature, Iterable):
-                    meaned_features_overspikes[s] = np.mean([i for i in feature if type(i) is not type(str(''))])
-                else:
-                    meaned_features_overspikes[s] = feature
-
-            except:
-                meaned_features_overspikes[s] = None #np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
-                print(meaned_features_overspikes)
-    for s in swp.sweep_feature_keys():
-        print(swp.sweep_feature(s))
-
-    #import pdb; pdb.set_trace()
-    frame_shape = pd.DataFrame(meaned_features_1, index=[0])
-    frame_dynamics = pd.DataFrame(meaned_features_overspikes, index=[0])
-    meaned_features_1.update(meaned_features_overspikes)
-    final_frame = pd.DataFrame(meaned_features_1, index=[0])
-
-    return final_frame, frame_dynamics, allen_features
-
-
-def three_feature_sets_on_static_models(model,debug = True, challenging=False):
-    '''
-    Conventions:
-        variables ending with 15 refer to 1.5 current injection protocols.
-        variables ending with 30 refer to 3.0 current injection protocols.
     Inputs:
-        NML-DB models, a method designed to be called inside an iteration loop, where a list of
-        models is iterated over, and on each iteration a new model is supplied to this method.
+     vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.
+     threshold: the value (in mV) above which vm has to cross for there
+                to be a spike.  Scalar float.
 
-    Outputs:
-        A dictionary of dataframes, for features sought according to: Druckman, EFEL, AllenSDK
+    Returns:
+     a neo.core.SpikeTrain containing the times of spikes.
+    """
+    from elephant.spike_train_generation import threshold_detection
 
-    '''
+    spike_train = threshold_detection(vm, threshold=threshold)
+    return spike_train
 
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-
-    times = np.array([float(t) for t in model.vm30.times])
-    volts = np.array([float(v) for v in model.vm30])
-
-
-    ##
-    # Allen Features
-    ##
-    #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    frame30, frame_dynamics, allen_features = allen_format(volts,times)
-    #import pdb; pdb.set_trace()
-    frame30['protocol'] = 3.0
-
-    ##
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-
-    times = np.array([float(t) for t in model.vm15.times])
-    volts = np.array([float(v) for v in model.vm15])
-
-    ##
-    # Allen Features
-    ##
-
-    frame15, frame_dynamics, allen_features = allen_format(volts,times)
-
-    frame15['protocol'] = 1.5
-    allen_frame = frame30.append(frame15)
-    #allen_frame.set_index('protocol')
-    ##
-    # Wrangle data to prepare for EFEL feature calculation.
-    ##
-    trace3 = {}
-    trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
-    trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
-    #trace3['peak_voltage'] = [ np.max(model.vm30) ]
-
-    trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
-    trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
-    trace3['stim_end'] = [ trace3['T'][-1] ]
-    traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    trace15 = {}
-    trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
-    trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
-    #trace15['peak_voltage'] = [ np.max(model.vm15) ]
-
-    trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
-    trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
-    trace15['stim_end'] = [ trace15['T'][-1] ]
-    traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    ##
-    # Compute
-    # EFEL features (HBP)
-    ##
-
-    efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
-    efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-
-    if challenging:
-        efel_results_inh = more_challenging(model)
+def get_spike_count(model):
+    vm = model.get_membrane_potential()
+    train = get_spike_train(vm)
+    return len(train)
 
 
-    df15 = pd.DataFrame(efel_results15)
-    #import pdb; pdb.set_trace()
-    df15['protocol'] = 1.5
 
-    df30 = pd.DataFrame(efel_results30)
-    df30['protocol'] = 3.0
+def get_data_sets(number_d_sets=2):
+    try:
+        with open('../all_allen_cells.p','rb') as f:
+            cells = pickle.load(f)
+    except:
+        ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
+        cells = ctc.get_cells()
+        with open('all_allen_cells.p','wb') as f:
+            pickle.dump(cells,f)
+    data = []
+    data_sets = []
+    path_name = 'data_nwbs'
 
-    efel_frame = df15.append(df30)
-    #efel_frame.set_index('protocol')
-
-
-    ##
-    # Get Druckman features, this is mainly handled in external files.
-    ##
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
-    DMTNMLO.test_setup(None,None,model= model)
-    dm_test_features = DMTNMLO.runTest()
-
-    dm_frame = pd.DataFrame(dm_test_features)
-    if challenging:
-        nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
-    #import pdb; pdb.set_trace()
-
-    if debug == True:
-        ##
-        # sort of a bit like unit testing, but causes a dowload which slows everything down:
-        ##
-        assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
-        from neuronunit.capabilities import spike_functions as sf
-         _ = not_necessary_for_program_completion(DMTNMLO)
-        print('note: False in evidence of spiking is not completely damning \n')
-        print('a threshold of 0mV is used to detect spikes, many models dont have a peak amp')
-        print('above 0mV, so 0 spikes using the threshold technique is not final')
-        print('druckman tests use derivative approach')
-
-        print(len(DMTNMLO.model.nmldb_model.get_APs()))
-
-        print(len(sf.get_spike_train(model.vm30))>1)
-        print(len(sf.get_spike_train(model.vm15))>1)
-
-
-    return {'model_id':model.name,'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
-
-
-def recoverable_interuptable_batch_process():
-    '''
-    Synposis:
-        slower serial mode but debug friendly and simple
-        Mass download all the NML model waveforms for all cortical regions
-        And perform three types of feature extraction on resulting waveforms.
-
-    Inputs: None
-    Outputs: None in namespace, yet, lots of data written to pickle.
-    '''
-    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
-
-    mid = [] # mid is a list of model identifiers.
-    for v in all_the_NML_IDs.values():
-        mid.extend(v[0])
-    path_name = str('three_feature_folder')
     try:
         os.mkdir(path_name)
     except:
-        print('directory already made :)')
-    try:
-        ##
-        # This is the index in the list to the last NML-DB model that was analyzed
-        # this index is stored to facilitate recovery from interruption
-        ##
-        with open('last_index.p','rb') as f:
-            index = pickle.load(f)
-    except:
-        index = 0
-    until_done = len(mid[index:-1])
-    cnt = 0
-    ##
-    # Do the batch job, with the background assumption that some models may
-    # have already been run and cached.
-    ##
-    while cnt <until_done-1:
-        for i,mid_ in enumerate(mid[index:-1]):
-            until_done = len(mid[index:-1])
-            model = get_static_models(mid_)
-            if type(model) is not type(None):
-            #if type(model) is not type(None):
-                model.name = None
-                model.name = str(mid_)
-                three_feature_sets = three_feature_sets_on_static_models(model)
-                with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
-                    pickle.dump(three_feature_sets,f)
-            with open('last_index.p','wb') as f:
-                pickle.dump(i,f)
-            cnt+=1
+        print('directory already made.')
 
-#import numpy as np
+    ids = [ c['id'] for c in cells ]
+
+    for specimen_id in ids[0:number_d_sets]:
+        temp_path = str(path_name)+str('/')+str(specimen_id)+'.p'
+        if os.path.exists(temp_path):
+            with open(temp_path,'rb') as f:
+                (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
+            data_sets.append((data_set_nwb,sweeps,specimen_id))
+        else:
+            data_set = ctc.get_ephys_data(specimen_id)
+            sweeps = ctc.get_ephys_sweeps(specimen_id)
+
+            file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
+            data_set_nwb = NwbDataSet(file_name)
+            data_sets.append((data_set_nwb,sweeps,specimen_id))
+
+            with open(temp_path,'wb') as f:
+                pickle.dump((data_set_nwb,sweeps,specimen_id),f)
+
+
+    return data_sets
+from get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
+import quantities as qt
+
+
+
+def allen_to_model_and_features(content):
+    data_set,sweeps,specimen_id = content
+    sweep_numbers_ = defaultdict(list)
+    for sweep in sweeps:
+        sweep_numbers_[sweep['stimulus_name']].append(sweep['sweep_number'])
+
+    sweep_numbers = data_set.get_sweep_numbers()
+    for sn in sweep_numbers:
+        spike_times = data_set.get_spike_times(sn)
+        sweep_data = data_set.get_sweep(sn)
+
+
+    cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+
+    sweep_numbers = data_set.get_sweep_numbers()
+    smallest_multi = 1000
+    all_currents = []
+    for sn in sweep_numbers:
+        spike_times = data_set.get_spike_times(sn)
+        sweep_data = data_set.get_sweep(sn)
+
+        if len(spike_times) == 1:
+            inj_rheobase = np.max(sweep_data['stimulus'])
+
+        if len(spike_times) < smallest_multi and len(spike_times) > 1:
+            smallest_multi = len(spike_times)
+            inj_multi_spike = np.max(sweep_data['stimulus'])
+            temp_vm = sweep_data['response']
+        val = np.max(sweep_data['stimulus'])
+        all_currents.append(val)
+
+
+    supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+    supra_currents = [s['stimulus_absolute_amplitude']*1E-11 for s in supras]
+    dmrheobase15 = supra_currents[0]#(1.5*inj_rheobase)
+    dmrheobase30 = supra_currents[1]#(3.0*inj_rheobase)
+
+
+    spike_times = data_set.get_spike_times(supras[-1]['sweep_number'])
+    sweep_data = data_set.get_sweep(supras[-1]['sweep_number'])
+    temp_vm = sweep_data['response']
+
+    #(nearest_allen15,idx_nearest_allen) = find_nearest(supra_currents,dmrheobase15)
+    #(nearest_allen30,idx_nearest_allen) = find_nearest(supra_currents,dmrheobase30)
+
+    #print(nearest_allen15,nearest_allen30,inj_multi_spike)
+    #if inj_multi_spike < nearest_allen15 and inj_rheobase!=nearest_allen15:# != inj_rheobase:
+    #    pass
+    #else:
+    #    pass
+
+    injection = sweep_data['stimulus']
+    # sampling rate is in Hz
+    sampling_rate = sweep_data['sampling_rate']
+    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    #model = NeuroMLDBStaticModel(cell_id)
+    #from neuronunit.models.static import StaticModel
+
+    sm = models.StaticModel(vm)
+    sm.druckmann2013_standard_current = dmrheobase15
+    sm.druckmann2013_strong_current = dmrheobase30
+    sm.name = specimen_id
+    sm.data_set = data_set
+    sm.sweeps = sweeps
+    sm.inject_square_current = MethodType(inject_square_current,sm)
+    sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
+
+
+    sm.rheobase_current = inj_rheobase
+    #sm.druckmann2013_standard_current = dmrheobase15
+    #sm.druckmann2013_strong_current = dmrheobase30
+    current = {}
+    current['amplitude'] = sm.rheobase_current
+    sm.vm_rheobase = sm.inject_square_current(current)
+    current['amplitude'] = sm.druckmann2013_standard_current
+    sm.vm15 = sm.inject_square_current(current)
+    current['amplitude'] = sm.druckmann2013_strong_current
+    sm.vm30 = sm.inject_square_current(current)
+
+    #try:
+    import asciiplotlib as apl
+    fig = apl.figure()
+    fig.plot([float(t) for t in sm.vm30.times],[float(v) for v in sm.vm30], label="data", width=100, height=80)
+    fig.show()
+
+    import asciiplotlib as apl
+    fig = apl.figure()
+    fig.plot([float(t) for t in sm.vm15.times],[float(v) for v in sm.vm15], label="data", width=100, height=80)
+    fig.show()
+
+    sm.get_spike_count = MethodType(get_spike_count,sm)
+    print(sm.get_spike_count())
+    #import pdb; pdb.set_trace()
+    #except:
+    #    pass
+
+    # these lines are functional
+
+    subs = [s for s in sweeps if s['stimulus_name'] == str('Square - 0.5ms Subthreshold')]
+    import pdb; pdb.set_trace()
+    sm.druckmann2013_input_resistance_currents = [s['stimulus_absolute_amplitude'] for s in subs]
+    sm.inject_square_current(subs[0]['stimulus_absolute_amplitude'])
+
+
+
+    spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
+    multi_spike_features = cell_features['long_squares']['hero_sweep']
+    biophysics = cell_features['long_squares']
+    shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
+
+    everything = (sm,sweep_data,cell_features,vm)
+    return everything
+
+
+def run_on_allen(number_d_sets=2):
+    data_sets = get_data_sets(number_d_sets=number_d_sets)
+    models = []
+    for data_set in data_sets:
+        models.append(allen_to_model_and_features(data_set))
+    models = [mod[0] for mod in models]
+    three_feature_sets = []
+    for mod in models:
+        import pdb; pdb.set_trace()
+
+        three_feature_sets.append(three_feature_sets_on_static_models(mod))
+
+
 
 def mid_to_model(mid_):
     model = get_static_models(mid_)
