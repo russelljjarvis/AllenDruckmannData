@@ -77,19 +77,7 @@ from dask import bag as db
 import glob
 
 
-def generate_prediction(self,model):
-    prediction = {}
-    prediction['n'] = 1
-    prediction['std'] = 1.0
-    prediction['mean'] = model.rheobase['mean']
-    return prediction
-'''
-def find_nearest(array, value):
-    #value = float(value)
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
-'''
+
 def get_m_p(model,current):
     '''
     synopsis:
@@ -127,7 +115,7 @@ def map_to_sms(tt):
             t.generate_prediction = MethodType(generate_prediction,t)
     return sms
 
-def standard_nu_tests_two(model):
+def standard_nu_tests(model):
     '''
     Do standard NU predictions, to do this may need to overwrite generate_prediction
     Overwrite/ride. a NU models inject_square_current,generate_prediction methods
@@ -148,26 +136,6 @@ def standard_nu_tests_two(model):
         nu_preds.append(pred)
     return nu_preds
 
-
-def standard_nu_tests(model,lookup):
-    '''
-    Do standard NU predictions, to do this may need to overwrite generate_prediction
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    model = update_static_model_methods(model,lookup)
-    nu_preds = []
-    for t in local_tests:
-        #import pdb; pdb.set_trace()
-        try:
-            pred = t.generate_prediction(model)
-        except:
-            pred = None
-        nu_preds.append(pred)
-    return nu_preds
 
 
 def crawl_ids(url):
@@ -199,13 +167,6 @@ def get_all_cortical_cells(list_to_get):
 
     return model_ids
 
-
-
-def find_nearest(array, value):
-
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
 
 
 def get_waveform_current_amplitude(waveform):
@@ -441,7 +402,7 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     dm_test_features = DMTNMLO.runTest()
 
     dm_frame = pd.DataFrame(dm_test_features)
-    #nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
+    #nu_preds = standard_nu_tests(DMTNMLO.model.nmldb_model)
     #import pdb; pdb.set_trace()
     ##
     # sort of a bit like unit testing, but causes a dowload which slows everything down:
