@@ -336,7 +336,7 @@ def allen_format(volts,times):
     return final_frame, frame_dynamics, allen_features
 
 
-def three_feature_sets_on_static_models(model,test_frame = None):
+def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     '''
     Conventions:
         variables ending with 15 refer to 1.5 current injection protocols.
@@ -381,15 +381,10 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     ##
 
     frame15, frame_dynamics, allen_features = allen_format(volts,times)
-    #import pdb; pdb.set_trace()
 
     frame15['protocol'] = 1.5
     allen_frame = frame30.append(frame15)
     #allen_frame.set_index('protocol')
-
-    #print(len(sf.get_spike_train(model.vm30))>1)
-    #print(len(sf.get_spike_train(model.vm15))>1)
-
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
@@ -418,7 +413,9 @@ def three_feature_sets_on_static_models(model,test_frame = None):
 
     efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
     efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-    # efel_results_inh = more_challenging(model)
+
+    if challenging:
+        efel_results_inh = more_challenging(model)
 
 
     df15 = pd.DataFrame(efel_results15)
@@ -440,13 +437,26 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     dm_test_features = DMTNMLO.runTest()
 
     dm_frame = pd.DataFrame(dm_test_features)
-    #nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
+    if challenging:
+        nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
     #import pdb; pdb.set_trace()
-    ##
-    # sort of a bit like unit testing, but causes a dowload which slows everything down:
-    ##
-    # assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
-    # _ = not_necessary_for_program_completion(DMTNMLO)
+
+    if debug == True:
+        ##
+        # sort of a bit like unit testing, but causes a dowload which slows everything down:
+        ##
+        assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
+        from neuronunit.capabilities import spike_functions as sf
+         _ = not_necessary_for_program_completion(DMTNMLO)
+        print('note: False in evidence of spiking is not completely damning \n')
+        print('a threshold of 0mV is used to detect spikes, many models dont have a peak amp')
+        print('above 0mV, so 0 spikes using the threshold technique is not final')
+        print('druckman tests use derivative approach')
+
+        print(len(DMTNMLO.model.nmldb_model.get_APs()))
+
+        print(len(sf.get_spike_train(model.vm30))>1)
+        print(len(sf.get_spike_train(model.vm15))>1)
 
 
     return {'model_id':model.name,'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
