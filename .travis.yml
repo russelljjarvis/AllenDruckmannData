@@ -15,5 +15,5 @@ before_install:
 # Run the unit test
 script:
 # show that running the docker container at runs the core program elements in a small batch job.
-  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
+  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/rick_example.py
   

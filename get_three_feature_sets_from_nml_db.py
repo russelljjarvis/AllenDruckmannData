@@ -432,13 +432,13 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
         ##
         assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
         from neuronunit.capabilities import spike_functions as sf
-         _ = not_necessary_for_program_completion(DMTNMLO)
+        _ = not_necessary_for_program_completion(DMTNMLO)
         print('note: False in evidence of spiking is not completely damning \n')
         print('a threshold of 0mV is used to detect spikes, many models dont have a peak amp')
         print('above 0mV, so 0 spikes using the threshold technique is not final')
         print('druckman tests use derivative approach')
 
-        print(len(DMTNMLO.model.nmldb_model.get_APs()))
+        # print(len(DMTNMLO.model.nmldb_model.get_APs()))
 
         print(len(sf.get_spike_train(model.vm30))>1)
         print(len(sf.get_spike_train(model.vm15))>1)
