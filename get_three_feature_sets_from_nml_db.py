@@ -6,12 +6,13 @@
 ##
 
 ##
-# docker pull russelljarvis/efel_allen_dm
-# I build it with the name russelljarvis/efel_allen_dm.
+# I build the docker image with the name russelljarvis/efel_allen_dm.
+# meaning that the command
+# docker pull russelljarvis/efel_allen_dm should work
 # This uses the docker file in this directory.
-# I build it with the name efl.
+# I build it with the name russelljarvis/efel_allen_dm.
 # and launch it with this alias.
-# alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata efel /bin/bash'
+# alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata russelljarvis/efel_allen_dm /bin/bash'
 ##
 
 ##
@@ -76,19 +77,7 @@ from dask import bag as db
 import glob
 
 
-def generate_prediction(self,model):
-    prediction = {}
-    prediction['n'] = 1
-    prediction['std'] = 1.0
-    prediction['mean'] = model.rheobase['mean']
-    return prediction
-'''
-def find_nearest(array, value):
-    #value = float(value)
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
-'''
+
 def get_m_p(model,current):
     '''
     synopsis:
@@ -126,7 +115,7 @@ def map_to_sms(tt):
             t.generate_prediction = MethodType(generate_prediction,t)
     return sms
 
-def standard_nu_tests_two(model):
+def standard_nu_tests(model):
     '''
     Do standard NU predictions, to do this may need to overwrite generate_prediction
     Overwrite/ride. a NU models inject_square_current,generate_prediction methods
@@ -198,13 +187,6 @@ def get_all_cortical_cells(list_to_get):
 
     return model_ids
 
-
-
-def find_nearest(array, value):
-
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
 
 
 def get_waveform_current_amplitude(waveform):
@@ -382,9 +364,12 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
 
     frame15, frame_dynamics, allen_features = allen_format(volts,times)
 
+
     frame15['protocol'] = 1.5
     allen_frame = frame30.append(frame15)
     #allen_frame.set_index('protocol')
+
+
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
