@@ -328,11 +328,12 @@ def allen_format(volts,times):
         print(swp.sweep_feature(s))
 
     #import pdb; pdb.set_trace()
+    frame_shape = pd.DataFrame(meaned_features_1, index=[0])
+    frame_dynamics = pd.DataFrame(meaned_features_overspikes, index=[0])
+    meaned_features_1.update(meaned_features_overspikes)
+    final_frame = pd.DataFrame(meaned_features_1, index=[0])
 
-    frame_shape = pd.Series(meaned_features_1).to_frame()
-    frame_dynamics = pd.Series(meaned_features_overspikes).to_frame()
-    final = frame_shape.append(frame_dynamics)
-    return final, frame_dynamics, allen_features
+    return final_frame, frame_dynamics, allen_features
 
 
 def three_feature_sets_on_static_models(model,test_frame = None):

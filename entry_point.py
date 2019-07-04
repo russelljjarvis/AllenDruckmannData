@@ -5,7 +5,7 @@ import glob
 # The slow old way
 # better for debugging
 # uncomment
-# runnable.recoverable_interuptable_batch_process()
+#runnable.recoverable_interuptable_batch_process()
 
 ##
 # The faster way to complete everything when confident
