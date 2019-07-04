@@ -328,14 +328,15 @@ def allen_format(volts,times):
         print(swp.sweep_feature(s))
 
     #import pdb; pdb.set_trace()
+    frame_shape = pd.DataFrame(meaned_features_1, index=[0])
+    frame_dynamics = pd.DataFrame(meaned_features_overspikes, index=[0])
+    meaned_features_1.update(meaned_features_overspikes)
+    final_frame = pd.DataFrame(meaned_features_1, index=[0])
 
-    frame_shape = pd.Series(meaned_features_1).to_frame()
-    frame_dynamics = pd.Series(meaned_features_overspikes).to_frame()
-    final = frame_shape.append(frame_dynamics)
-    return final, frame_dynamics, allen_features
+    return final_frame, frame_dynamics, allen_features
 
 
-def three_feature_sets_on_static_models(model,debug = True):
+def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     '''
     Conventions:
         variables ending with 15 refer to 1.5 current injection protocols.
@@ -412,7 +413,9 @@ def three_feature_sets_on_static_models(model,debug = True):
 
     efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
     efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-    # efel_results_inh = more_challenging(model)
+
+    if challenging:
+        efel_results_inh = more_challenging(model)
 
 
     df15 = pd.DataFrame(efel_results15)
@@ -434,7 +437,8 @@ def three_feature_sets_on_static_models(model,debug = True):
     dm_test_features = DMTNMLO.runTest()
 
     dm_frame = pd.DataFrame(dm_test_features)
-    #nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
+    if challenging:
+        nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
     #import pdb; pdb.set_trace()
 
     if debug == True:
