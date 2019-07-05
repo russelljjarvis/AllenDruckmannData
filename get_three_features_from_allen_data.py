@@ -440,11 +440,15 @@ def allen_to_model_and_features(content):
     return everything
 
 def model_analysis(model):
+    try:
+        os.mkdir(str('allen_three_feature_folder'))
+    except:
+        print('directory already exists')
     if type(model) is not type(None):
         three_feature_sets = three_feature_sets_on_static_models(model)
         try:
             assert type(model.name) is not None
-            with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
+            with open(str('allen_three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
                 pickle.dump(three_feature_sets,f)
         except:
             print('big error')
