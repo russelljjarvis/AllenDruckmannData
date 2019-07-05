@@ -17,3 +17,30 @@ Each pickle file consists of Druckmann features, and Allen Features on Allen Dat
 There is another single pickle file that specifies cell model ids to be used.
 
 The folder three_feature_folder contains outputs.
+
+
+The main method that does the aligned feature extraction is called
+```def three_feature_sets_on_static_models```
+
+ I build the docker image with the name russelljarvis/efel_allen_dm.
+ meaning that the command
+ ```
+ docker pull russelljarvis/efel_allen_dm 
+ ```
+ should work
+ This uses the docker file in this directory.
+I build it with the name russelljarvis/efel_allen_dm.
+ and launch it with this alias.
+```
+alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata russelljarvis/efel_allen_dm /bin/bash'
+```
+
+
+# This is how my travis script builds and runs:
+# before_install:
+ - docker pull russelljarvis/efel_allen_dm
+ - git clone -b barcelona https://github.com/russelljjarvis/neuronunit.git
+
+# script:
+# show that running the docker container at least works.
+  - docker run -v neuronunit:/home/jovyan/neuronunit russelljarvis/efel_allen_dm python /home/jovyan/work/allendata/small_travis_run.py
