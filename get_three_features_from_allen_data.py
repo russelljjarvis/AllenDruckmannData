@@ -158,7 +158,6 @@ def sweep_to_analog_signal(sweep_data):
     sampling_rate = sweep_data['sampling_rate']
     vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
     vm = vm.rescale(qt.mV)
-    #import pdb; pdb.set_trace()
     return vm
 
 def find_nearest(array, value):
@@ -197,18 +196,32 @@ def get_15_30(model,rheobase,data_set=None):
 
     supra_numbers = [s['sweep_number'] for s in supras]
     zipped_current_numbers = list(zip(supra_currents,supra_numbers))
+
+    index_15 = False
     for i,zi in enumerate(zipped_current_numbers):
         if zi[0]== np.median(supra_currents):
             index_15 = zi[1]
             model.druckmann2013_standard_current = supra_currents[i]
 
+    print(supras)
+    print(len(supras))
 
     model.druckmann2013_strong_current = supra_currents[-1]
-    sweep_data30 = data_set.get_sweep(supra_numbers[-1])
-    vm30 = sweep_to_analog_signal(sweep_data30)
+    try:
+        sweep_data30 = data_set.get_sweep(supra_numbers[-1])
+        vm30 = sweep_to_analog_signal(sweep_data30)
+
+    except:
+        import pdb
+        pdb.set_trace()
+
+    if index_15 == False:
+        index_15 = supra_numbers[int(len(supra_currents)/2.0)]
+        model.druckmann2013_standard_current = supra_currents[int(len(supra_currents)/2.0)]
 
     sweep_data15 = data_set.get_sweep(index_15)
     vm15 = sweep_to_analog_signal(sweep_data15)
+
     model.vm30 = vm30
     model.vm15 = vm15
 
