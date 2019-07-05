@@ -17,5 +17,5 @@ import sys
 #file_paths = glob.glob("models/*.p")
 #_ = runnable.analyze_models_from_cache(file_paths)
 import get_three_features_from_allen_data as runnable
-runnable.faster_run_on_allen(200)
+runnable.faster_run_on_allen(15)
 sys.exit(0)
