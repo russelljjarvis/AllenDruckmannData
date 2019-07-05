@@ -1,5 +1,7 @@
 import get_three_feature_sets_from_nml_db as runnable
 import glob
+import sys
+
 #import aligned_feature_extraction as runnable
 ##
 # The slow old way
@@ -15,5 +17,5 @@ import glob
 #file_paths = glob.glob("models/*.p")
 #_ = runnable.analyze_models_from_cache(file_paths)
 import get_three_features_from_allen_data as runnable
-runnable.run_on_allen(3)
-import pdb; pdb.set_trace()
+runnable.faster_run_on_allen(200)
+sys.exit(0)

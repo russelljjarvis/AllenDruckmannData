@@ -354,6 +354,8 @@ def allen_to_model_and_features(content):
         shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
 
     supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+    if len(supras) == 0:
+        return None
     supra_numbers = [s['sweep_number'] for s in supras]
 
     smallest_multi = 1000
@@ -442,12 +444,34 @@ def run_on_allen(number_d_sets=2):
     models = []
     for data_set in data_sets:
         models.append(allen_to_model_and_features(data_set))
+    models = [mod for mod in models if mod is not None]
     models = [mod[0] for mod in models]
+
     three_feature_sets = []
+    #models = [mod for mod in models if mod is not None]
+
     for model in models:
+        #if model is not None:
         model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
+def faster_run_on_allen(number_d_sets=200):
+    data_sets = get_data_sets(number_d_sets=number_d_sets)
+    models = []
+    data_bag = db.from_sequence(data_sets,npartitions=8)
+    models = list(data_bag.map(allen_to_model_and_features).compute())
+    #for data_set in data_sets:
+    #    models.append(allen_to_model_and_features(data_set))
+    models = [mod for mod in models if mod is not None]
+    models = [mod[0] for mod in models]
 
+    three_feature_sets = []
+    #models = [mod for mod in models if mod is not None]
+    data_bag = db.from_sequence(models,npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    return
+    #for model in models:
+        #if model is not None:
+    #    model_analysis(model)
 
 def faster_make_model_and_cache():
     '''

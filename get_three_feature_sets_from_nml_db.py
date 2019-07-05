@@ -458,6 +458,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
         print(len(sf.get_spike_train(model.vm30))>1)
         print(len(sf.get_spike_train(model.vm15))>1)
 
+    print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
 
     return {'model_id':model.name,'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
 
