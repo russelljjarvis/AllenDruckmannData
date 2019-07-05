@@ -238,8 +238,12 @@ class DMTNMLO(object):
     def runTest(self):
         predictions = {}
         for i, t in enumerate(self.test_set):
+          
            (tclass,prediction) = self.run_test(i)
-           prot =  self.test_prot_map[tclass.name]
+           try:
+               prot =  self.test_prot_map[tclass.name]
+           except:
+               prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
            predictions[tclass.name] = {}
            predictions[tclass.name]['pred'] = prediction
            predictions[tclass.name]['protocol'] = prot

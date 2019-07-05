@@ -11,8 +11,9 @@ import glob
 # The faster way to complete everything when confident
 ##
 
-# runnable.faster_make_model_and_cache()
+#runnable.faster_make_model_and_cache()
 #file_paths = glob.glob("models/*.p")
 #_ = runnable.analyze_models_from_cache(file_paths)
 import get_three_features_from_allen_data as runnable
 runnable.run_on_allen(3)
+import pdb; pdb.set_trace()

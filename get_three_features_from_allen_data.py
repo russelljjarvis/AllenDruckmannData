@@ -90,31 +90,16 @@ from collections import defaultdict
 from allensdk.core.nwb_data_set import NwbDataSet
 import pickle
 
-import aibs
 
-#dm_tests = init_dm_tests(value,1.5*value)
+from get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
+import quantities as qt
 
-#try:
-#    ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
-#except:#
-#    pass#
-#    all_features = ctc.get_all_features()
-#    pickle.dump(all_features,open('all_features.p','wb'))
 #
 
 
 
 
 
-'''
-import pdb; pdb.set_trace()
-prefix = str('/dedicated_folder')
-try:
-    os.mkdir(prefix)
-except:
-    pass
-pickle.dump(everything,open(prefix+str(specimen_id)+'.p','wb'))
-'''
 
 def generate_prediction(self,model):
     prediction = {}
@@ -129,84 +114,6 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
 
-def get_m_p(model,current):
-    '''
-    synopsis:
-        get_m_p belongs to a 3 method stack (2 below)
-
-    replace get_membrane_potential in a NU model class with a statically defined lookup table.
-
-
-    '''
-    try:
-        consolted = model.lookup[float(current['amplitude'])]
-    except:
-        consolted = model.lookup[float(current['injected_square_current']['amplitude'])]
-    return consolted
-
-def update_static_model_methods(model,lookup):
-    '''
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
-    model.lookup = lookup
-    model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-
-    return model#, tests
-
-#Depreciated
-def map_to_sms(tt):
-
-    # given a list of static models, update the static models methods
-    #for model in sms:
-    #model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-    for t in tt:
-        if 'RheobaseTest' in t.name:
-            t.generate_prediction = MethodType(generate_prediction,t)
-    return sms
-
-def standard_nu_tests_two(model):
-    '''
-    Do standard NU predictions, to do this may need to overwrite generate_prediction
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    #model = update_static_model_methods(model,lookup)
-    nu_preds = []
-    for t in local_tests:
-        if str('Rheobase') not in t.name:
-            #import pdb; pdb.set_trace()
-            try:
-                pred = t.generate_prediction(model)
-            except:
-                pred = None
-        nu_preds.append(pred)
-    return nu_preds
-
-
-def standard_nu_tests(model,lookup):
-    '''
-    Do standard NU predictions, to do this may need to overwrite generate_prediction
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    model = update_static_model_methods(model,lookup)
-    nu_preds = []
-    for t in local_tests:
-        #import pdb; pdb.set_trace()
-        try:
-            pred = t.generate_prediction(model)
-        except:
-            pred = None
-        nu_preds.append(pred)
-    return nu_preds
 
 
 def crawl_ids(url):
@@ -240,40 +147,117 @@ def get_all_cortical_cells(list_to_get):
 
 
 
-def find_nearest(array, value):
 
+def get_waveform_current_amplitude(waveform):
+    return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
+
+
+def sweep_to_analog_signal(sweep_data):
+    temp_vm = sweep_data['response']
+    injection = sweep_data['stimulus']
+    sampling_rate = sweep_data['sampling_rate']
+    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    vm = vm.rescale(qt.mV)
+    #import pdb; pdb.set_trace()
+    return vm
+
+def find_nearest(array, value):
+    array = [float(arr_) for arr_ in array]
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
 
 
-def get_waveform_current_amplitude(waveform):
-    return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
+def find_nearest_data_point(current_list,numbers):
+    (nearest,idx) = find_nearest(current_list,current)
+    index = np.asarray(numbers)[idx]
+    return (index, nearest)
+    #sweep_data = data_set.get_sweep(supras[idx]['sweep_number'])
+
+def nearest_to_sweep(nearest,idx,numbers):
+    #(nearest,idx) = find_nearest(current_list,current)
+    #index = np.asarray(numbers)[idx]
+    sweep_data = data_set.get_sweep(supras[idx]['sweep_number'])
+    return sweep_data
+import copy
+def get_15_30(model,rheobase,data_set=None):
+    '''
+    model, data_set is basically like a lookup table.
+    '''
+
+    if not hasattr(rheobase,'units'):
+        rheobase = rheobase*qt.A
+        rheobase = rheobase.rescale(qt.pA)
+
+    if data_set == None:
+        data_set = model.data_set
+        sweeps = model.sweeps
+    supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+    supra_currents = [(s['stimulus_absolute_amplitude']*qt.pA).rescale(qt.pA) for s in supras]
+
+    supra_numbers = [s['sweep_number'] for s in supras]
+    zipped_current_numbers = list(zip(supra_currents,supra_numbers))
+    for i,zi in enumerate(zipped_current_numbers):
+        if zi[0]== np.median(supra_currents):
+            index_15 = zi[1]
+            model.druckmann2013_standard_current = supra_currents[i]
+
+
+    model.druckmann2013_strong_current = supra_currents[-1]
+    sweep_data30 = data_set.get_sweep(supra_numbers[-1])
+    vm30 = sweep_to_analog_signal(sweep_data30)
+
+    sweep_data15 = data_set.get_sweep(index_15)
+    vm15 = sweep_to_analog_signal(sweep_data15)
+    model.vm30 = vm30
+    model.vm15 = vm15
+
+    return
 
 def inject_square_current(model,current,data_set=None):
     '''
     model, data_set is basically like a lookup table.
     '''
     if type(current) is type({}):
-        current = float(current['amplitude'])
+        current = current['amplitude']
+
+    if not hasattr(current,'units'):
+        current = current*qt.A
+        current = current.rescale(qt.pA)
+
+    if hasattr(model,'fast_lookup'):
+        if float(current) in model.fast_lookup.keys():
+            return model.fast_lookup[float(current)]
+
     if data_set == None:
         data_set = model.data_set
         sweeps = model.sweeps
-    numbers = data_set.get_sweep_numbers()
-    injections = [ np.max(data_set.get_sweep(sn)['stimulus']) for sn in numbers ]
-    sns = [ sn for sn in numbers]
-    print([s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')])
-    #sm.sweeps
-    import pdb; pdb.set_trace()
-    (nearest,idx) = find_nearest(injections,current)
-    index = np.asarray(numbers)[idx]
+    if not hasattr(model,'all_long_square_injections'):
+        supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+        subs = [s for s in sweeps if s['stimulus_name'] == str('Square - 0.5ms Subthreshold')]
+        sub_currents = [(s['stimulus_absolute_amplitude']*qt.pA).rescale(qt.pA) for s in subs]
+        supra_currents = [(s['stimulus_absolute_amplitude']*qt.pA).rescale(qt.pA) for s in supras]
+        supra_numbers = [s['sweep_number'] for s in supras]
+        sub_numbers = [s['sweep_number'] for s in subs]
+        everything = supra_currents
+        everything.extend(sub_currents)
+        everything_index = supra_numbers
+        everything_index.extend(sub_numbers)
+        model.all_long_square_injections = None
+        model.all_long_square_injection_indexs = None
+        model.fast_lookup = None
+        model.all_long_square_injections = everything
+        model.all_long_square_injection_indexs = everything_index
+        model.fast_lookup = {}
+    (nearest,idx) = find_nearest(model.all_long_square_injections,float(current))
+    index = np.asarray(model.all_long_square_injection_indexs)[idx]
     sweep_data = data_set.get_sweep(index)
-    temp_vm = sweep_data['response']
-    injection = sweep_data['stimulus']
-    sampling_rate = sweep_data['sampling_rate']
-    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
-    model._vm = vm
+    model._vm = sweep_to_analog_signal(sweep_data)
+    model.fast_lookup[float(current)] = model._vm
     return model._vm
+
+
+
 
 def get_membrane_potential(model):
     return model._vm
@@ -321,8 +305,11 @@ def get_data_sets(number_d_sets=2):
         print('directory already made.')
 
     ids = [ c['id'] for c in cells ]
-
-    for specimen_id in ids[0:number_d_sets]:
+    if number_d_sets == None:
+        limited_range = ids[0:-1]
+    else:
+        limited_range = ids[0:number_d_sets]
+    for specimen_id in limited_range:
         temp_path = str(path_name)+str('/')+str(specimen_id)+'.p'
         if os.path.exists(temp_path):
             with open(temp_path,'rb') as f:
@@ -341,8 +328,6 @@ def get_data_sets(number_d_sets=2):
 
 
     return data_sets
-from get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
-import quantities as qt
 
 
 
@@ -358,55 +343,53 @@ def allen_to_model_and_features(content):
         sweep_data = data_set.get_sweep(sn)
 
 
-    cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    ##
+    # cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    ##
+    cell_features = None
+    if cell_features is not None:
+        spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
+        multi_spike_features = cell_features['long_squares']['hero_sweep']
+        biophysics = cell_features['long_squares']
+        shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
 
-    sweep_numbers = data_set.get_sweep_numbers()
+    supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+    supra_numbers = [s['sweep_number'] for s in supras]
+
     smallest_multi = 1000
     all_currents = []
-    for sn in sweep_numbers:
+    for sn in supra_numbers:
         spike_times = data_set.get_spike_times(sn)
         sweep_data = data_set.get_sweep(sn)
 
         if len(spike_times) == 1:
             inj_rheobase = np.max(sweep_data['stimulus'])
-
+            temp_vm = sweep_data['response']
+            break
         if len(spike_times) < smallest_multi and len(spike_times) > 1:
             smallest_multi = len(spike_times)
             inj_multi_spike = np.max(sweep_data['stimulus'])
+            inj_rheobase = inj_multi_spike
             temp_vm = sweep_data['response']
-        val = np.max(sweep_data['stimulus'])
-        all_currents.append(val)
-
-
-    supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
-    supra_currents = [s['stimulus_absolute_amplitude']*1E-11 for s in supras]
-    dmrheobase15 = supra_currents[0]#(1.5*inj_rheobase)
-    dmrheobase30 = supra_currents[1]#(3.0*inj_rheobase)
-
 
     spike_times = data_set.get_spike_times(supras[-1]['sweep_number'])
     sweep_data = data_set.get_sweep(supras[-1]['sweep_number'])
-    temp_vm = sweep_data['response']
-
-    #(nearest_allen15,idx_nearest_allen) = find_nearest(supra_currents,dmrheobase15)
-    #(nearest_allen30,idx_nearest_allen) = find_nearest(supra_currents,dmrheobase30)
-
-    #print(nearest_allen15,nearest_allen30,inj_multi_spike)
-    #if inj_multi_spike < nearest_allen15 and inj_rheobase!=nearest_allen15:# != inj_rheobase:
-    #    pass
-    #else:
-    #    pass
-
-    injection = sweep_data['stimulus']
+    sd = sweep_data['stimulus']
     # sampling rate is in Hz
     sampling_rate = sweep_data['sampling_rate']
-    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
-    #model = NeuroMLDBStaticModel(cell_id)
-    #from neuronunit.models.static import StaticModel
 
+    inj = AnalogSignal(sd,sampling_rate=sampling_rate*qt.Hz,units=qt.pA)
+
+    indexs = np.where(sd==np.max(sd))[0]
+
+    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
     sm = models.StaticModel(vm)
-    sm.druckmann2013_standard_current = dmrheobase15
-    sm.druckmann2013_strong_current = dmrheobase30
+    sm.allen = None
+    sm.allen = True
+    sm.protocol = {}
+    sm.protocol['Time_Start'] = inj.times[indexs[0]]
+    sm.protocol['Time_End'] = inj.times[indexs[-1]]
+
     sm.name = specimen_id
     sm.data_set = data_set
     sm.sweeps = sweeps
@@ -415,49 +398,43 @@ def allen_to_model_and_features(content):
 
 
     sm.rheobase_current = inj_rheobase
-    #sm.druckmann2013_standard_current = dmrheobase15
-    #sm.druckmann2013_strong_current = dmrheobase30
     current = {}
     current['amplitude'] = sm.rheobase_current
     sm.vm_rheobase = sm.inject_square_current(current)
-    current['amplitude'] = sm.druckmann2013_standard_current
-    sm.vm15 = sm.inject_square_current(current)
-    current['amplitude'] = sm.druckmann2013_strong_current
-    sm.vm30 = sm.inject_square_current(current)
 
-    #try:
-    import asciiplotlib as apl
-    fig = apl.figure()
-    fig.plot([float(t) for t in sm.vm30.times],[float(v) for v in sm.vm30], label="data", width=100, height=80)
-    fig.show()
+    try:
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot([float(t) for t in sm.vm30.times],[float(v) for v in sm.vm30], label="data", width=100, height=80)
+        fig.show()
 
-    import asciiplotlib as apl
-    fig = apl.figure()
-    fig.plot([float(t) for t in sm.vm15.times],[float(v) for v in sm.vm15], label="data", width=100, height=80)
-    fig.show()
-
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot([float(t) for t in sm.vm15.times],[float(v) for v in sm.vm15], label="data", width=100, height=80)
+        fig.show()
+    except:
+        pass
     sm.get_spike_count = MethodType(get_spike_count,sm)
-    print(sm.get_spike_count())
-    #import pdb; pdb.set_trace()
-    #except:
-    #    pass
-
-    # these lines are functional
-
     subs = [s for s in sweeps if s['stimulus_name'] == str('Square - 0.5ms Subthreshold')]
-    import pdb; pdb.set_trace()
-    sm.druckmann2013_input_resistance_currents = [s['stimulus_absolute_amplitude'] for s in subs]
-    sm.inject_square_current(subs[0]['stimulus_absolute_amplitude'])
-
-
-
-    spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
-    multi_spike_features = cell_features['long_squares']['hero_sweep']
-    biophysics = cell_features['long_squares']
-    shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
-
+    sub_currents = [(s['stimulus_absolute_amplitude']*qt.A).rescale(qt.pA) for s in subs]
+    # unfortunately only one inhibitory current available here.
+    sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[0] ]
+    sm.inject_square_current(sub_currents[0])
+    get_15_30(sm,inj_rheobase)
     everything = (sm,sweep_data,cell_features,vm)
     return everything
+
+def model_analysis(model):
+    if type(model) is not type(None):
+        three_feature_sets = three_feature_sets_on_static_models(model)
+        try:
+            assert type(model.name) is not None
+            with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
+                pickle.dump(three_feature_sets,f)
+        except:
+            print('big error')
+            import pdb; pdb.set_trace()
+    return
 
 
 def run_on_allen(number_d_sets=2):
@@ -467,21 +444,10 @@ def run_on_allen(number_d_sets=2):
         models.append(allen_to_model_and_features(data_set))
     models = [mod[0] for mod in models]
     three_feature_sets = []
-    for mod in models:
-        import pdb; pdb.set_trace()
+    for model in models:
+        model_analysis(model)
+        #three_feature_sets.append(three_feature_sets_on_static_models(model))
 
-        three_feature_sets.append(three_feature_sets_on_static_models(mod))
-
-
-
-def mid_to_model(mid_):
-    model = get_static_models(mid_)
-    if type(model) is not type(None):
-        model.name = None
-        model.name = str(mid_)
-        with open(str('models')+str('/')+str(mid_)+'.p','wb') as f:
-            pickle.dump(model,f)
-    return
 
 def faster_make_model_and_cache():
     '''
@@ -511,17 +477,6 @@ def faster_make_model_and_cache():
     mid_bag = db.from_sequence(mid,npartitions=8)
     list(mid_bag.map(mid_to_model).compute())
 
-def model_analysis(model):
-    if type(model) is not type(None):
-        three_feature_sets = three_feature_sets_on_static_models(model)
-        try:
-            assert type(model.name) is not None
-            with open(str('three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
-                pickle.dump(three_feature_sets,f)
-        except:
-            print('big error')
-            import pdb; pdb.set_trace()
-    return
 
 def analyze_models_from_cache(file_paths):
     models = []

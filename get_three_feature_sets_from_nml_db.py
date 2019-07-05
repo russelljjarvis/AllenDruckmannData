@@ -258,7 +258,7 @@ def get_static_models(cell_id):
     model.vminh =  model.inject_square_current(current)
     return model
 
-def allen_format(volts,times):
+def allen_format(volts,times,optional_vm=None):
     '''
     Synposis:
         At its most fundamental level, AllenSDK still calls a single trace a sweep.
@@ -275,12 +275,15 @@ def allen_format(volts,times):
         we out put features from the middle spike of a spike train.
 
     '''
+    if optional_vm is not None:
+        from elephant.spike_train_generation import threshold_detection
+
+        spike_train = threshold_detection(optional_vm, threshold=0)
+
     ext = EphysSweepSetFeatureExtractor([times],[volts])
+
     ext.process_spikes()
-
     swp = ext.sweeps()[0]
-
-
     spikes = swp.spikes()
 
     meaned_features_1 = {}
@@ -317,8 +320,7 @@ def allen_format(volts,times):
 
     return final_frame, frame_dynamics, allen_features
 
-
-def three_feature_sets_on_static_models(model,debug = True, challenging=False):
+def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     '''
     Conventions:
         variables ending with 15 refer to 1.5 current injection protocols.
@@ -337,16 +339,21 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     # Allen Features
     ##
 
-
+    #import pdb; pdb.set_trace()
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
-
-
+    try:
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot(times, volts, label="V_{m} (mV), versus time (ms)", width=100, height=80)
+        fig.show()
+    except:
+        pass
     ##
     # Allen Features
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    frame30, frame_dynamics, allen_features = allen_format(volts,times)
+    frame30, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm30)
     #import pdb; pdb.set_trace()
     frame30['protocol'] = 3.0
 
@@ -354,7 +361,6 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     # wrangle data in preperation for computing
     # Allen Features
     ##
-
     times = np.array([float(t) for t in model.vm15.times])
     volts = np.array([float(v) for v in model.vm15])
 
@@ -362,32 +368,48 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     # Allen Features
     ##
 
-    frame15, frame_dynamics, allen_features = allen_format(volts,times)
+    frame15, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm15)
 
 
     frame15['protocol'] = 1.5
     allen_frame = frame30.append(frame15)
+
     #allen_frame.set_index('protocol')
-
-
+    ##
+    # Get Druckman features, this is mainly handled in external files.
+    ##
+    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO.test_setup(None,None,model= model)
+    dm_test_features = DMTNMLO.runTest()
+    dm_frame = pd.DataFrame(dm_test_features)
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
     trace3 = {}
     trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
-    trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
+    trace3['V'] = [ float(v) for v in model.vm30.magnitude]#temp_vm
     #trace3['peak_voltage'] = [ np.max(model.vm30) ]
 
-    trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
-    trace3['stim_end'] = [ trace3['T'][-1] ]
+    if not hasattr(model,'allen'):
+        trace3['stim_end'] = [ trace3['T'][-1] ]
+        trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
+
+    else:
+        trace3['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
+        trace3['stim_start'] = [ float(model.protocol['Time_Start'])*1000.0 ]
+
     traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
-    trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
-    #trace15['peak_voltage'] = [ np.max(model.vm15) ]
-
-    trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    trace15['V'] = [ float(v) for v in model.vm15.magnitude ]#temp_vm
+    if not hasattr(model,'allen'):
+        trace15['stim_end'] = [ trace15['T'][-1] ]
+        trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    else:
+        trace15['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
+        trace15['stim_start'] = [ float(model.protocol['Time_Start'])*1000.0 ]
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
     trace15['stim_end'] = [ trace15['T'][-1] ]
     traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
@@ -397,6 +419,7 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     ##
 
     efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+
     efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
 
     if challenging:
@@ -414,14 +437,6 @@ def three_feature_sets_on_static_models(model,debug = True, challenging=False):
     #efel_frame.set_index('protocol')
 
 
-    ##
-    # Get Druckman features, this is mainly handled in external files.
-    ##
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
-    DMTNMLO.test_setup(None,None,model= model)
-    dm_test_features = DMTNMLO.runTest()
-
-    dm_frame = pd.DataFrame(dm_test_features)
     if challenging:
         nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
     #import pdb; pdb.set_trace()
