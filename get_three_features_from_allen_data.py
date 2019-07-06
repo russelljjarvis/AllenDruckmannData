@@ -360,11 +360,11 @@ def allen_to_model_and_features(content):
         sweeps = ctc.get_ephys_sweeps(specimen_id)
         file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
         data_set_nwb = NwbDataSet(file_name)
-        
-        #data_sets.append((data_set_nwb,sweeps,specimen_id))
-        #with open(temp_path,'wb') as f:
-        #   pickle.dump((data_set_nwb,sweeps,specimen_id),f)
-        sweep_numbers = data_set_nwb.get_sweep_numbers()
+        try:
+            sweep_numbers = data_set_nwb.get_sweep_numbers()
+        except:
+            return None
+
     for sn in sweep_numbers:
         spike_times = data_set.get_spike_times(sn)
         sweep_data = data_set.get_sweep(sn)

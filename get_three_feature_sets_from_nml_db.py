@@ -28,6 +28,7 @@
 #
 ##
 
+
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 try:
     import cPickle
@@ -206,6 +207,8 @@ def get_static_models(cell_id):
 
 
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
+    #import pdb
+    #pdb.set_trace()
     model_contents = requests.get(url)
     model_contents = json.loads(model_contents.text)
     model = NeuroMLDBStaticModel(cell_id)
@@ -473,11 +476,12 @@ def recoverable_interuptable_batch_process():
     Inputs: None
     Outputs: None in namespace, yet, lots of data written to pickle.
     '''
-    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+    mid =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+    mid = mid[1:-1]
 
-    mid = [] # mid is a list of model identifiers.
-    for v in all_the_NML_IDs.values():
-        mid.extend(v[0])
+    #mid = [] # mid is a list of model identifiers.
+    #for v in all_the_NML_IDs.values():
+    #    mid.extend(v[0])
     path_name = str('three_feature_folder')
     try:
         os.mkdir(path_name)
@@ -488,6 +492,7 @@ def recoverable_interuptable_batch_process():
         # This is the index in the list to the last NML-DB model that was analyzed
         # this index is stored to facilitate recovery from interruption
         ##
+        assert 1==2
         with open('last_index.p','rb') as f:
             index = pickle.load(f)
     except:
@@ -501,11 +506,12 @@ def recoverable_interuptable_batch_process():
     while cnt <until_done-1:
         for i,mid_ in enumerate(mid[index:-1]):
             until_done = len(mid[index:-1])
-            model = get_static_models(mid_)
+            model = get_static_models(mid_[1])
             if type(model) is not type(None):
             #if type(model) is not type(None):
                 model.name = None
-                model.name = str(mid_)
+                model.name = str(mid_[1])
+                model.information = mid_
                 three_feature_sets = three_feature_sets_on_static_models(model)
                 with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
                     pickle.dump(three_feature_sets,f)
@@ -516,14 +522,19 @@ def recoverable_interuptable_batch_process():
 #import numpy as np
 
 def mid_to_model(mid_):
-    model = get_static_models(mid_)
+    model = get_static_models(mid_[1])
     if type(model) is not type(None):
         model.name = None
-        model.name = str(mid_)
-        with open(str('models')+str('/')+str(mid_)+'.p','wb') as f:
+        model.name = str(mid_[1])
+        model.information = mid_
+        with open(str('models')+str('/')+str(mid_[1])+'.p','wb') as f:
             pickle.dump(model,f)
     return
 
+import csv
+
+#def map_info_onto_model():
+    
 def faster_make_model_and_cache():
     '''
     Synposis:
@@ -534,12 +545,28 @@ def faster_make_model_and_cache():
     Inputs: None
     Outputs: None in namespace, yet, lots of data written to pickle.
     '''
-    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+    try:
+        #assert 1==2
+        model_information =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+    except:
+        with open('cortical_tags.csv','rt') as csvfile:
+            reader = csv.reader(csvfile,delimiter=',',quotechar='|')
+            model_information = [row for row in reader]
 
+            with open('cortical_NML_IDs/cortical_cells_list.p','wb') as f :
+                pickle.dump(model_information,f)
+
+    mid = model_information
+    #[row for row in model_information]
+    mid = mid[1:-1]
+
+
+    #pdb.set_trace()
+    '''
     mid = [] # mid is a list of model identifiers.
     for k,v in all_the_NML_IDs.items():
         mid.extend(v[0])
-
+    '''
     path_name = str('models')
     try:
         os.mkdir(path_name)
@@ -568,6 +595,12 @@ def analyze_models_from_cache(file_paths):
     models = []
     for f in file_paths:
         models.append(pickle.load(open(f,'rb')))
+    print('Available Models: ',len(models))
+   
+    models = [m for m in models if m.vm30 is not None]
+    print('use-able Available Models: ',len(models))
+    import pdb
+    pdb.set_trace()
     models_bag = db.from_sequence(models,npartitions=8)
     list(models_bag.map(model_analysis).compute())
 
