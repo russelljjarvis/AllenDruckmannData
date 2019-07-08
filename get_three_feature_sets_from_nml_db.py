@@ -71,7 +71,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
-from neuronunit.neuromldb import NeuroMLDBStaticModel
+from neuromldb import NeuroMLDBStaticModel
 
 import dm_test_interoperable #import Interoperabe
 from dask import bag as db
