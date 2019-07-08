@@ -8,7 +8,7 @@ import get_three_features_from_allen_data as runnable_allen
 # The slow old way
 # better for debugging
 # uncomment
-# runnable.recoverable_interuptable_batch_process()
+# runnable_nml.recoverable_interuptable_batch_process()
 
 ##
 # The faster way to complete everything when confident
@@ -18,6 +18,8 @@ import get_three_features_from_allen_data as runnable_allen
 file_paths = glob.glob("models/*.p")
 _ = runnable_nml.analyze_models_from_cache(file_paths)
 #runnable_allen.faster_run_on_allen(20)
-#runnable_allen.run_on_allen(22)
+#import pdb
+#pdb.set_trace()
+runnable_allen.run_on_allen(300)
 
 sys.exit(0)
