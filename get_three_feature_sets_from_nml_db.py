@@ -522,6 +522,10 @@ def recoverable_interuptable_batch_process():
 #import numpy as np
 
 def mid_to_model(mid_):
+    try:
+        os.mkdir(str('models'))
+    except:
+        pass
     model = get_static_models(mid_[1])
     if type(model) is not type(None):
         model.name = None
