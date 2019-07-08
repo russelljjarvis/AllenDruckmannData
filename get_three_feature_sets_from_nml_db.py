@@ -71,7 +71,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
-#from neuronunit.
 from neuromldb import NeuroMLDBStaticModel
 
 import dm_test_interoperable #import Interoperabe
@@ -258,8 +257,7 @@ def get_static_models(cell_id):
     model.vm30 = model.inject_square_current(current)
     current['amplitude'] = druckmann2013_input_resistance_currents[0]
     model.vminh =  model.inject_square_current(current)
-    #import pdb
-    #pdb.set_trace()
+
     return model
 
 def allen_format(volts,times,optional_vm=None):
@@ -375,7 +373,6 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     ##
 
     frame15, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm15)
-
     if frame15 is not None:
         frame15['protocol'] = 1.5
 
