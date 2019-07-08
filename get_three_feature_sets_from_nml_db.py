@@ -71,23 +71,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
-from neuronunit.neuromldb import NeuroMLDBStaticModel
+#from neuronunit.
+from neuromldb import NeuroMLDBStaticModel
 
 import dm_test_interoperable #import Interoperabe
 from dask import bag as db
 import glob
 
 
-
+'''
 def get_m_p(model,current):
-    '''
-    synopsis:
-        get_m_p belongs to a 3 method stack (2 below)
+    #synopsis:
+    #    get_m_p belongs to a 3 method stack (2 below)
 
-    replace get_membrane_potential in a NU model class with a statically defined lookup table.
+    #replace get_membrane_potential in a NU model class with a statically defined lookup table.
 
 
-    '''
     try:
         consolted = model.lookup[float(current['amplitude'])]
     except:
@@ -95,11 +94,11 @@ def get_m_p(model,current):
     return consolted
 
 def update_static_model_methods(model,lookup):
-    '''
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
+   
+    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    #with methods for querying a lookup table, such that given a current injection,
+    #a V_{m} is returned.
+    
     model.lookup = lookup
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
 
@@ -117,12 +116,12 @@ def map_to_sms(tt):
     return sms
 
 def standard_nu_tests(model):
-    '''
-    Do standard NU predictions, to do this may need to overwrite generate_prediction
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
+   
+    #Do standard NU predictions, to do this may need to overwrite generate_prediction
+    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    #with methods for querying a lookup table, such that given a current injection,
+    #a V_{m} is returned.
+
     rts,complete_map = pickle.load(open('russell_tests.p','rb'))
     local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
     #model = update_static_model_methods(model,lookup)
@@ -139,12 +138,12 @@ def standard_nu_tests(model):
 
 
 def standard_nu_tests(model,lookup):
-    '''
-    Do standard NU predictions, to do this may need to overwrite generate_prediction
-    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    with methods for querying a lookup table, such that given a current injection,
-    a V_{m} is returned.
-    '''
+   
+    #Do standard NU predictions, to do this may need to overwrite generate_prediction
+    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    #with methods for querying a lookup table, such that given a current injection,
+    #a V_{m} is returned.
+
     rts,complete_map = pickle.load(open('russell_tests.p','rb'))
     local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
     model = update_static_model_methods(model,lookup)
@@ -157,7 +156,7 @@ def standard_nu_tests(model,lookup):
             pred = None
         nu_preds.append(pred)
     return nu_preds
-
+'''
 
 def crawl_ids(url):
     ''' move to aibs '''
@@ -259,6 +258,8 @@ def get_static_models(cell_id):
     model.vm30 = model.inject_square_current(current)
     current['amplitude'] = druckmann2013_input_resistance_currents[0]
     model.vminh =  model.inject_square_current(current)
+    #import pdb
+    #pdb.set_trace()
     return model
 
 def allen_format(volts,times,optional_vm=None):
@@ -288,6 +289,8 @@ def allen_format(volts,times,optional_vm=None):
     ext.process_spikes()
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
+    if len(spikes)==0:
+        return (None,None,None)
 
     meaned_features_1 = {}
     skeys = [ skey for skey in spikes[0].keys() ]
@@ -357,8 +360,8 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
     frame30, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm30)
-    #import pdb; pdb.set_trace()
-    frame30['protocol'] = 3.0
+    if frame30 is not None:
+        frame30['protocol'] = 3.0
 
     ##
     # wrangle data in preperation for computing
@@ -373,10 +376,13 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
 
     frame15, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm15)
 
+    if frame15 is not None:
+        frame15['protocol'] = 1.5
 
-    frame15['protocol'] = 1.5
-    allen_frame = frame30.append(frame15)
-
+    if frame30 is not None and frame15 is not None:    
+        allen_frame = frame30.append(frame15)
+    else:
+        allen_frame = pd.DataFrame()
     #allen_frame.set_index('protocol')
     ##
     # Get Druckman features, this is mainly handled in external files.
@@ -599,8 +605,8 @@ def analyze_models_from_cache(file_paths):
    
     models = [m for m in models if m.vm30 is not None]
     print('use-able Available Models: ',len(models))
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #ipdb.set_trace()
     models_bag = db.from_sequence(models,npartitions=8)
     list(models_bag.map(model_analysis).compute())
 
