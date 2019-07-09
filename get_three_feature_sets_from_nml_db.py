@@ -93,11 +93,11 @@ def get_m_p(model,current):
     return consolted
 
 def update_static_model_methods(model,lookup):
-   
+
     #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
     #with methods for querying a lookup table, such that given a current injection,
     #a V_{m} is returned.
-    
+
     model.lookup = lookup
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
 
@@ -115,7 +115,7 @@ def map_to_sms(tt):
     return sms
 
 def standard_nu_tests(model):
-   
+
     #Do standard NU predictions, to do this may need to overwrite generate_prediction
     #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
     #with methods for querying a lookup table, such that given a current injection,
@@ -137,7 +137,7 @@ def standard_nu_tests(model):
 
 
 def standard_nu_tests(model,lookup):
-   
+
     #Do standard NU predictions, to do this may need to overwrite generate_prediction
     #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
     #with methods for querying a lookup table, such that given a current injection,
@@ -317,12 +317,15 @@ def allen_format(volts,times,optional_vm=None):
         print(swp.sweep_feature(s))
 
     #import pdb; pdb.set_trace()
+    '''
     frame_shape = pd.DataFrame(meaned_features_1, index=[0])
     frame_dynamics = pd.DataFrame(meaned_features_overspikes, index=[0])
     meaned_features_1.update(meaned_features_overspikes)
     final_frame = pd.DataFrame(meaned_features_1, index=[0])
-
-    return final_frame, frame_dynamics, allen_features
+    '''
+    meaned_features_overspikes.update(meaned_features_1)
+    all_allen_features = meaned_features_overspikes
+    return all_allen_features, allen_features
 
 def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     '''
@@ -357,11 +360,11 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # Allen Features
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    frame30, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm30)
-    if frame30 is not None:
-        frame30['protocol'] = 3.0
-
+    all_allen_features30, allen_features = allen_format(volts,times,optional_vm=model.vm30)
+    #if frame30 is not None:
+    #    frame30['protocol'] = 3.0
     ##
+
     # wrangle data in preperation for computing
     # Allen Features
     ##
@@ -372,14 +375,16 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # Allen Features
     ##
 
-    frame15, frame_dynamics, allen_features = allen_format(volts,times,optional_vm=model.vm15)
+    all_allen_features15, allen_features = allen_format(volts,times,optional_vm=model.vm15)
+    '''
     if frame15 is not None:
         frame15['protocol'] = 1.5
 
-    if frame30 is not None and frame15 is not None:    
+    if frame30 is not None and frame15 is not None:
         allen_frame = frame30.append(frame15)
     else:
         allen_frame = pd.DataFrame()
+    '''
     #allen_frame.set_index('protocol')
     ##
     # Get Druckman features, this is mainly handled in external files.
@@ -387,7 +392,10 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     DMTNMLO = dm_test_interoperable.DMTNMLO()
     DMTNMLO.test_setup(None,None,model= model)
     dm_test_features = DMTNMLO.runTest()
-    dm_frame = pd.DataFrame(dm_test_features)
+    for d in dm_test_features:
+        if d is None:
+            import pdb; pdb.set_trace()
+    #dm_frame = pd.DataFrame(dm_test_features)
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
@@ -424,14 +432,14 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # EFEL features (HBP)
     ##
 
-    efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+    efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
 
-    efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
+    efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
 
     if challenging:
         efel_results_inh = more_challenging(model)
 
-
+    '''
     df15 = pd.DataFrame(efel_results15)
     #import pdb; pdb.set_trace()
     df15['protocol'] = 1.5
@@ -440,6 +448,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     df30['protocol'] = 3.0
 
     efel_frame = df15.append(df30)
+    '''
     #efel_frame.set_index('protocol')
 
 
@@ -466,7 +475,56 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
 
     print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
 
-    return {'model_id':model.name,'efel':efel_frame,'dm':dm_frame,'allen':allen_frame}
+    return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+
+
+def get_allen_frame(nml_data):
+    indexs = [ nml['model_id'] for nml in nml_data ]
+    rows = [ nml['allen'] for nml in nml_data if len(nml)]
+    preds3 = [r.iloc[0] for r in rows if len(r)]
+
+    #preds = [r for r in rows ]
+    dfObj0 = pd.DataFrame(columns=preds3[0].keys(), index=indexs)
+    for i,d in enumerate(preds3):
+        dfObj0.iloc[i] = preds3[i]#.iloc[0]
+    return dfObj0
+#df_allen_features_allen
+#df_allen_features_allen
+def l_nml_to_dm(nml_data):
+    indexs = [ nml['model_id'] for nml in nml_data ]
+    rows = [ nml['dm'] for nml in nml_data ]
+    preds = [r for r in rows ]
+    dfObj0 = pd.DataFrame(columns=preds[0].keys(), index=indexs)
+    for i,d in enumerate(rows):
+         dfObj0.iloc[i] = rows[i].iloc[0]
+    return dfObj0
+
+
+def l_nml_to_efel(nml_data):
+    indexs = [ nml['model_id'] for nml in nml_data ]
+    rows = [ nml['efel'] for nml in nml_data ]
+    preds = [r for r in rows ]
+
+    dfObj1 = pd.DataFrame(columns=preds[0].keys(), index=indexs)
+    for i,d in enumerate(rows):
+         dfObj1.iloc[i] = rows[i].iloc[0]
+    return dfObj1
+
+def giant_frame(allen_analysis,nml_data):
+    # https://chrisalbon.com/python/data_wrangling/pandas_join_merge_dataframe/
+    dm_frame_allen = l_nml_to_dm(allen_analysis)
+    dm_frame_nml = l_nml_to_dm(nml_data)
+    dm_frame_allen = dm_frame_allen.append(dm_frame_nml)
+    df_allen_features_nml = get_allen_frame(nml_data)
+    df_allen_features_allen = get_allen_frame(allen_analysis)
+    df_allen_features_allen = df_allen_features_allen.append(df_allen_features_nml)
+    indices_are_nml_id = l_nml_to_efel(nml_data)
+    indices_are_specimen_id = l_nml_to_efel(allen_analysis)
+    indices_are_specimen_id = indices_are_specimen_id.append(indices_are_nml_id)
+    merged = indices_are_specimen_id
+    # merged = pd.merge(dm_frame_allen, df_allen_features_allen, right_index=True, left_index=True)
+    final = pd.merge(merged, indices_are_specimen_id, right_index=True, left_index=True)
+    return final
 
 
 def recoverable_interuptable_batch_process():
@@ -525,6 +583,10 @@ def recoverable_interuptable_batch_process():
 #import numpy as np
 
 def mid_to_model(mid_):
+    try:
+        os.mkdir(str('models'))
+    except:
+        pass
     model = get_static_models(mid_[1])
     if type(model) is not type(None):
         model.name = None
@@ -537,7 +599,7 @@ def mid_to_model(mid_):
 import csv
 
 #def map_info_onto_model():
-    
+
 def faster_make_model_and_cache():
     '''
     Synposis:
@@ -599,7 +661,7 @@ def analyze_models_from_cache(file_paths):
     for f in file_paths:
         models.append(pickle.load(open(f,'rb')))
     print('Available Models: ',len(models))
-   
+
     models = [m for m in models if m.vm30 is not None]
     print('use-able Available Models: ',len(models))
     #import pdb
