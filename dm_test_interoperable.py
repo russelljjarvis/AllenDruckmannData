@@ -242,9 +242,7 @@ class DMTNMLO(object):
                print(self.test_prot_map)
                print(tclass.name)
                prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
-           
-
-    import pdb; pdb.set_trace()
+               import pdb; pdb.set_trace()
            predictions[tclass.name] = {}
            predictions[tclass.name]['pred'] = prediction
            predictions[tclass.name]['protocol'] = prot

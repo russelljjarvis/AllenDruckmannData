@@ -474,9 +474,10 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
         print(len(sf.get_spike_train(model.vm15))>1)
 
     print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
-
-    return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
-
+    if hasattr(model,'information'):
+        return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+    else:
+        return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
 
 def get_allen_frame(nml_data):
     indexs = [ nml['model_id'] for nml in nml_data ]
