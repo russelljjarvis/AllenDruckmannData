@@ -45,7 +45,6 @@ nml_data = []
 for f in file_paths:
     nml_data.append(pickle.load(open(f,'rb')))
 print(nml_data)
-
 #print(nml_data[0]['dm'].columns)
 #print(nml_data[0]['efel'].columns)
 #print(nml_data[0]['allen'].columns)
@@ -57,6 +56,11 @@ allen_analysis = []
 for f in file_paths:
     allen_analysis.append(pickle.load(open(f,'rb')))
 
+#import pdb
+#pdb.set_trace()
 
-merged = runnable_nml.giant_frame(allen_analysis,nml_data)
+
+merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True)
+merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False)
+
 merged.to_csv('index_by_id.csv', sep='\t')

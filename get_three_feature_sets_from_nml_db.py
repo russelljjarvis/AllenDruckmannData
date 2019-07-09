@@ -479,52 +479,53 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     else:
         return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
 
-def get_allen_frame(nml_data):
-    indexs = [ nml['model_id'] for nml in nml_data ]
-    rows = [ nml['allen'] for nml in nml_data if len(nml)]
-    preds3 = [r.iloc[0] for r in rows if len(r)]
 
-    #preds = [r for r in rows ]
-    dfObj0 = pd.DataFrame(columns=preds3[0].keys(), index=indexs)
-    for i,d in enumerate(preds3):
-        dfObj0.iloc[i] = preds3[i]#.iloc[0]
-    return dfObj0
-#df_allen_features_allen
-#df_allen_features_allen
-def l_nml_to_dm(nml_data):
+
+def nmlefel(nml_data,onefive=True):
+    indexs = [ nml['model_id'] for nml in nml_data ]
+    if onefive:
+        rows = [ nml['efel_15'] for nml in nml_data ]
+    else:
+        rows = [ nml['efel_30'] for nml in nml_data ]
+    list_of_dicts = []
+    for r in rows:
+        list_of_dicts.append(r[0])
+    df = pd.DataFrame(list_of_dicts,index=indexs)
+    return df
+
+def nmldm(nml_data):
     indexs = [ nml['model_id'] for nml in nml_data ]
     rows = [ nml['dm'] for nml in nml_data ]
-    preds = [r for r in rows ]
-    dfObj0 = pd.DataFrame(columns=preds[0].keys(), index=indexs)
-    for i,d in enumerate(rows):
-         dfObj0.iloc[i] = rows[i].iloc[0]
-    return dfObj0
-
-
-def l_nml_to_efel(nml_data):
+    list_of_dicts = []
+    for r in rows:
+        list_of_dicts.append(r)
+    df = pd.DataFrame(list_of_dicts,index=indexs)
+    return df
+def nmlallen(nml_data,onefive=True):
     indexs = [ nml['model_id'] for nml in nml_data ]
-    rows = [ nml['efel'] for nml in nml_data ]
-    preds = [r for r in rows ]
+    if onefive:
+        rows = [ nml['allen_15'] for nml in nml_data ]
+    else:
+        rows = [ nml['allen_30'] for nml in nml_data ]
+    #rows = [ nml['allen'] for nml in nml_data if len(nml)]
+    list_of_dicts = []
+    for r in rows:
+        list_of_dicts.append(r)
+    df = pd.DataFrame(list_of_dicts,index=indexs)
+    return df
+    #print(df)
 
-    dfObj1 = pd.DataFrame(columns=preds[0].keys(), index=indexs)
-    for i,d in enumerate(rows):
-         dfObj1.iloc[i] = rows[i].iloc[0]
-    return dfObj1
+def giant_frame(allen_analysis,nml_data,onefive=True):
+    dfe = nmlefel(nml_data,onefive)
+    dfd = nmldm(nml_data)
+    dfa = nmlallen(nml_data,onefive)
+    merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
+    final = pd.merge(merged, dfa, right_index=True, left_index=True)
+    if onefive:
+        final.to_csv('collated15.csv', sep='\t')
+    else:
+        final.to_csv('collated30.csv', sep='\t')
 
-def giant_frame(allen_analysis,nml_data):
-    # https://chrisalbon.com/python/data_wrangling/pandas_join_merge_dataframe/
-    dm_frame_allen = l_nml_to_dm(allen_analysis)
-    dm_frame_nml = l_nml_to_dm(nml_data)
-    dm_frame_allen = dm_frame_allen.append(dm_frame_nml)
-    df_allen_features_nml = get_allen_frame(nml_data)
-    df_allen_features_allen = get_allen_frame(allen_analysis)
-    df_allen_features_allen = df_allen_features_allen.append(df_allen_features_nml)
-    indices_are_nml_id = l_nml_to_efel(nml_data)
-    indices_are_specimen_id = l_nml_to_efel(allen_analysis)
-    indices_are_specimen_id = indices_are_specimen_id.append(indices_are_nml_id)
-    merged = indices_are_specimen_id
-    # merged = pd.merge(dm_frame_allen, df_allen_features_allen, right_index=True, left_index=True)
-    final = pd.merge(merged, indices_are_specimen_id, right_index=True, left_index=True)
     return final
 
 
