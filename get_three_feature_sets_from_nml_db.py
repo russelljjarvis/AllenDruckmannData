@@ -516,7 +516,7 @@ def recoverable_interuptable_batch_process():
                 model.name = str(mid_[1])
                 model.information = mid_
                 three_feature_sets = three_feature_sets_on_static_models(model)
-                with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
+                with open(str(path_name)+str('/')+str(mid_[1])+'.p','wb') as f:
                     pickle.dump(three_feature_sets,f)
             with open('last_index.p','wb') as f:
                 pickle.dump(i,f)
