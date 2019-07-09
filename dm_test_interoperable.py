@@ -9,11 +9,11 @@ Which seemed to work really well with a static NU backend.
 import unittest
 import pickle
 import quantities as pq
-try:
-    from neuronunit.tests.druckmann2013 import *
-except:
-    from neuronunit.tests.druckman2013 import *
-    
+#try:
+#    from neuronunit.tests.druckmann2013 import *
+#except:
+from neuronunit.tests.druckman2013 import *
+
 from neuronunit.neuromldb import NeuroMLDBStaticModel
 from numpy import array
 from quantities import *
@@ -232,18 +232,24 @@ class DMTNMLO(object):
             predicted = test_class.generate_prediction(self.model)['mean']
 
         except:
-            predicted = -3333333 * units
+            predicted = None
+
+            import pdb; pdb.set_trace()
+            #predicted = -3333333 * units
         return (test_class,predicted)
 
     def runTest(self):
         predictions = {}
         for i, t in enumerate(self.test_set):
-          
+
            (tclass,prediction) = self.run_test(i)
            try:
                prot =  self.test_prot_map[tclass.name]
            except:
+               print(self.test_prot_map)
+               print(tclass.name)
                prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
+               import pdb; pdb.set_trace()
            predictions[tclass.name] = {}
            predictions[tclass.name]['pred'] = prediction
            predictions[tclass.name]['protocol'] = prot
