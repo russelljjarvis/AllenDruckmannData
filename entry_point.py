@@ -17,7 +17,7 @@ import glob
 # The slow old way
 # better for debugging
 # uncomment
-runnable_nml.recoverable_interuptable_batch_process()
+#runnable_nml.recoverable_interuptable_batch_process()
 
 ##
 # The faster way to complete everything when confident
@@ -25,15 +25,15 @@ runnable_nml.recoverable_interuptable_batch_process()
 
 #runnable_nml.faster_make_model_and_cache()
 file_paths = glob.glob("models/*.p")
-_ = runnable_nml.analyze_models_from_cache(file_paths)
+_ = runnable_nml.analyze_models_from_cache(file_paths[0:1])
 #runnable_allen.faster_run_on_allen(20)
 #import pdb
 #pdb.set_trace()
-runnable_allen.run_on_allen(300)
+runnable_allen.run_on_allen(1)
 
 
 
-file_paths = glob.glob("three_feature_folder/legacy_format/*.p")
+file_paths = glob.glob("three_feature_folder/*.p")
 nml_data = []
 
 for f in file_paths:
