@@ -23,10 +23,10 @@ import glob
 # The faster way to complete everything when confident
 ##
 
-#runnable_nml.faster_make_model_and_cache()
-#file_paths = glob.glob("models/*.p")
-#_ = runnable_nml.analyze_models_from_cache(file_paths)
-#runnable_allen.faster_run_on_allen(20)
+runnable_nml.faster_make_model_and_cache()
+file_paths = glob.glob("models/*.p")
+_ = runnable_nml.analyze_models_from_cache(file_paths)
+runnable_allen.faster_run_on_allen(200)
 #import pdb
 #pdb.set_trace()
 #runnable_allen.run_on_allen(150)
@@ -35,7 +35,7 @@ import glob
 #runnable_allen.faster_run_on_allen(20)
 #import pdb
 #pdb.set_trace()
-runnable_allen.run_on_allen(1)
+#runnable_allen.run_on_allen(1)
 
 
 
