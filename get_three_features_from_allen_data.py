@@ -453,9 +453,9 @@ def allen_to_model_and_features(content):
     sub_currents = [(s['stimulus_absolute_amplitude']*qt.A).rescale(qt.pA) for s in subs]
     if len(sub_currents) == 3:
         sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[1], sub_currents[2] ]
-        
+
     elif len(sub_currents) == 2:
-    
+
         sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[1] ]
     elif len(sub_currents) == 1:
         # unfortunately only one inhibitory current available here.
@@ -486,7 +486,13 @@ def model_analysis(model):
 
 
 def run_on_allen(number_d_sets=2):
-    data_sets = get_data_sets(number_d_sets=number_d_sets)
+    try:
+        with open('allen_data.pkl','rb') as f:
+            data_sets = pickle.load(f)
+    except:
+        data_sets = get_data_sets(number_d_sets=number_d_sets)
+        with open('allen_data.pkl','wb') as f:
+            pickle.dump(data_sets,f)
     models = []
     for data_set in data_sets:
         models.append(allen_to_model_and_features(data_set))
@@ -494,7 +500,6 @@ def run_on_allen(number_d_sets=2):
     models = [mod[0] for mod in models]
 
     three_feature_sets = []
-    #models = [mod for mod in models if mod is not None]
 
     for model in models:
         #if model is not None:
