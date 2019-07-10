@@ -28,14 +28,14 @@ runnable_allen.faster_run_on_allen(200)
 file_paths = glob.glob("three_feature_folder/*.p")
 nml_data = []
 
-for f in file_paths[0:2]:
+for f in file_paths:
     nml_data.append(pickle.load(open(f,'rb')))
 #print(nml_data)
 
 
 file_paths = glob.glob("allen_three_feature_folder/*.p")
 allen_analysis = []
-for f in file_paths[0:2]:
+for f in file_paths:
     allen_analysis.append(pickle.load(open(f,'rb')))
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True)
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False)
