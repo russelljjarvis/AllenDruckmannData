@@ -299,7 +299,7 @@ def get_spike_count(model):
 
 
 
-def get_data_sets(number_d_sets=2):
+def get_data_sets(upper_bound=2,lower_bound=None):
     try:
         with open('../all_allen_cells.p','rb') as f:
             cells = pickle.load(f)
@@ -319,10 +319,10 @@ def get_data_sets(number_d_sets=2):
         print('directory already made.')
 
     ids = [ c['id'] for c in cells ]
-    if number_d_sets == None:
+    if upper_bound == None and lower_bound is None:
         limited_range = ids[0:-1]
-    else:
-        limited_range = ids[0:number_d_sets]
+    elif upper_bound is not None and lower_bound is not None:
+        limited_range = ids[lower_bound:upper_bound]
     for specimen_id in limited_range:
         temp_path = str(path_name)+str('/')+str(specimen_id)+'.p'
         if os.path.exists(temp_path):
@@ -493,7 +493,7 @@ def run_on_allen(number_d_sets=2):
         data_sets = get_data_sets(number_d_sets=number_d_sets)
         with open('allen_data.pkl','wb') as f:
             pickle.dump(data_sets,f)
-  
+
     models = []
     for data_set in data_sets:
         models.append(allen_to_model_and_features(data_set))
@@ -507,24 +507,27 @@ def run_on_allen(number_d_sets=2):
         model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
 def faster_run_on_allen(number_d_sets=200):
-    try:
+    if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
-            assert len(models) == number_d_sets
-    except:
-        
-        data_sets = get_data_sets(number_d_sets=number_d_sets)
+        if len(models) < number_d_sets:
+            data_sets = get_data_sets(lower_bound=len(models),upper_bound=number_d_sets)
+            models = []
+            data_bag = db.from_sequence(data_sets,npartitions=8)
+            models = list(data_bag.map(allen_to_model_and_features).compute())
+            models = [mod for mod in models if mod is not None]
+            models = [mod[0] for mod in models]
+            with open('allen_models.pkl','wb') as f:
+                pickle.dump(models,f)
+    else:
+        data_sets = get_data_sets(lower_bound=number_d_sets)
         models = []
         data_bag = db.from_sequence(data_sets,npartitions=8)
         models = list(data_bag.map(allen_to_model_and_features).compute())
         models = [mod for mod in models if mod is not None]
         models = [mod[0] for mod in models]
-
         with open('allen_models.pkl','wb') as f:
             pickle.dump(models,f)
-  
-
-
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
