@@ -493,6 +493,7 @@ def run_on_allen(number_d_sets=2):
         data_sets = get_data_sets(number_d_sets=number_d_sets)
         with open('allen_data.pkl','wb') as f:
             pickle.dump(data_sets,f)
+  
     models = []
     for data_set in data_sets:
         models.append(allen_to_model_and_features(data_set))
@@ -506,23 +507,29 @@ def run_on_allen(number_d_sets=2):
         model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
 def faster_run_on_allen(number_d_sets=200):
-    data_sets = get_data_sets(number_d_sets=number_d_sets)
-    models = []
-    data_bag = db.from_sequence(data_sets,npartitions=8)
-    models = list(data_bag.map(allen_to_model_and_features).compute())
-    #for data_set in data_sets:
-    #    models.append(allen_to_model_and_features(data_set))
-    models = [mod for mod in models if mod is not None]
-    models = [mod[0] for mod in models]
+    try:
+        with open('allen_models.pkl','rb') as f:
+            models = pickle.load(f)
+            assert len(models) == number_d_sets
+    except:
+        
+        data_sets = get_data_sets(number_d_sets=number_d_sets)
+        models = []
+        data_bag = db.from_sequence(data_sets,npartitions=8)
+        models = list(data_bag.map(allen_to_model_and_features).compute())
+        models = [mod for mod in models if mod is not None]
+        models = [mod[0] for mod in models]
 
-    three_feature_sets = []
-    #models = [mod for mod in models if mod is not None]
-    data_bag = db.from_sequence(models,npartitions=8)
+        with open('allen_models.pkl','wb') as f:
+            pickle.dump(models,f)
+  
+
+
+    data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     return
-    #for model in models:
-        #if model is not None:
-    #    model_analysis(model)
 
 def faster_make_model_and_cache():
     '''
