@@ -387,6 +387,7 @@ def allen_to_model_and_features(content):
 
     smallest_multi = 1000
     all_currents = []
+    temp_vm = None
     for sn in supra_numbers:
         spike_times = data_set.get_spike_times(sn)
         sweep_data = data_set.get_sweep(sn)
@@ -411,6 +412,10 @@ def allen_to_model_and_features(content):
 
     indexs = np.where(sd==np.max(sd))[0]
 
+
+
+    if temp_vm is None:
+        return (None,None,None,None)
     vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
     sm = models.StaticModel(vm)
     sm.allen = None
@@ -446,9 +451,19 @@ def allen_to_model_and_features(content):
     sm.get_spike_count = MethodType(get_spike_count,sm)
     subs = [s for s in sweeps if s['stimulus_name'] == str('Square - 0.5ms Subthreshold')]
     sub_currents = [(s['stimulus_absolute_amplitude']*qt.A).rescale(qt.pA) for s in subs]
-    # unfortunately only one inhibitory current available here.
-    sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[0] ]
-    sm.inject_square_current(sub_currents[0])
+    if len(sub_currents) == 3:
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[1], sub_currents[2] ]
+        
+    elif len(sub_currents) == 2:
+    
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[1] ]
+    elif len(sub_currents) == 1:
+        # unfortunately only one inhibitory current available here.
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[0] ]
+    try:
+        sm.inject_square_current(sub_currents[0])
+    except:
+        pass
     get_15_30(sm,inj_rheobase)
     everything = (sm,sweep_data,cell_features,vm)
     return everything

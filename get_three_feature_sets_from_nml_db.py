@@ -288,7 +288,7 @@ def allen_format(volts,times,optional_vm=None):
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
     if len(spikes)==0:
-        return (None,None,None)
+        return (None,None)
 
     meaned_features_1 = {}
     skeys = [ skey for skey in spikes[0].keys() ]
@@ -316,13 +316,7 @@ def allen_format(volts,times,optional_vm=None):
     for s in swp.sweep_feature_keys():
         print(swp.sweep_feature(s))
 
-    #import pdb; pdb.set_trace()
-    '''
-    frame_shape = pd.DataFrame(meaned_features_1, index=[0])
-    frame_dynamics = pd.DataFrame(meaned_features_overspikes, index=[0])
-    meaned_features_1.update(meaned_features_overspikes)
-    final_frame = pd.DataFrame(meaned_features_1, index=[0])
-    '''
+
     meaned_features_overspikes.update(meaned_features_1)
     all_allen_features = meaned_features_overspikes
     return all_allen_features, allen_features
@@ -376,26 +370,18 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     ##
 
     all_allen_features15, allen_features = allen_format(volts,times,optional_vm=model.vm15)
-    '''
-    if frame15 is not None:
-        frame15['protocol'] = 1.5
-
-    if frame30 is not None and frame15 is not None:
-        allen_frame = frame30.append(frame15)
-    else:
-        allen_frame = pd.DataFrame()
-    '''
-    #allen_frame.set_index('protocol')
     ##
     # Get Druckman features, this is mainly handled in external files.
     ##
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
-    DMTNMLO.test_setup(None,None,model= model)
-    dm_test_features = DMTNMLO.runTest()
-    for d in dm_test_features:
-        if d is None:
-            import pdb; pdb.set_trace()
-    #dm_frame = pd.DataFrame(dm_test_features)
+    #if model.ir_currents
+    if hasattr(model,'druckmann2013_input_resistance_currents'):
+        DMTNMLO = dm_test_interoperable.DMTNMLO()
+        DMTNMLO.test_setup(None,None,model= model)
+        dm_test_features = DMTNMLO.runTest()
+    else:
+        dm_test_features = None
+    #for d in dm_test_features:
+    #    if d is None:
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
@@ -439,22 +425,9 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     if challenging:
         efel_results_inh = more_challenging(model)
 
-    '''
-    df15 = pd.DataFrame(efel_results15)
-    #import pdb; pdb.set_trace()
-    df15['protocol'] = 1.5
-
-    df30 = pd.DataFrame(efel_results30)
-    df30['protocol'] = 3.0
-
-    efel_frame = df15.append(df30)
-    '''
-    #efel_frame.set_index('protocol')
-
 
     if challenging:
         nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
-    #import pdb; pdb.set_trace()
 
     if debug == True:
         ##
@@ -501,6 +474,8 @@ def nmldm(nml_data):
         list_of_dicts.append(r)
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
+
+import copy
 def nmlallen(nml_data,onefive=True):
     indexs = [ nml['model_id'] for nml in nml_data ]
     if onefive:
@@ -510,7 +485,18 @@ def nmlallen(nml_data,onefive=True):
     #rows = [ nml['allen'] for nml in nml_data if len(nml)]
     list_of_dicts = []
     for r in rows:
-        list_of_dicts.append(r)
+        if r is None:
+            # write in a data frame entry for a non spiking model
+            temp = {}
+            temp = copy.copy(rows[0])
+            for k,v in temp.items():
+                temp[k] = None
+            list_of_dicts.append(temp)
+        else:
+            list_of_dicts.append(r)
+    #print(list_of_dicts)
+    #import pdb
+    #pdb.set_trace()
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
     #print(df)
@@ -519,12 +505,25 @@ def giant_frame(allen_analysis,nml_data,onefive=True):
     dfe = nmlefel(nml_data,onefive)
     dfd = nmldm(nml_data)
     dfa = nmlallen(nml_data,onefive)
+
+    dfea = nmlefel(allen_analysis,onefive)
+    dfda = nmldm(allen_analysis)
+    dfaa = nmlallen(allen_analysis,onefive)
+
+    dfa.append(dfaa)
+    dfe.append(dfea)
+    dfd.append(dfda)
+    
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
     if onefive:
-        final.to_csv('collated15.csv', sep='\t')
+        with open(str('onefive_df.pkl'),'wb') as f:
+            pickle.dump(final,f)
+
     else:
-        final.to_csv('collated30.csv', sep='\t')
+        with open(str('three_df.pkl'),'wb') as f:
+            pickle.dump(final,f)
+
 
     return final
 
