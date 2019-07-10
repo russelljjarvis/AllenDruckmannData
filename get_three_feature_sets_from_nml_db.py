@@ -470,8 +470,19 @@ def nmldm(nml_data):
     indexs = [ nml['model_id'] for nml in nml_data ]
     rows = [ nml['dm'] for nml in nml_data ]
     list_of_dicts = []
+    #for r in rows:
+    #    list_of_dicts.append(r)
     for r in rows:
-        list_of_dicts.append(r)
+        if r is None:
+            # write in a data frame entry for a non spiking model
+            temp = {}
+            temp = copy.copy(rows[0])
+            for k,v in temp.items():
+                temp[k] = None
+            list_of_dicts.append(temp)
+        else:
+            list_of_dicts.append(r)
+            
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 
@@ -494,14 +505,13 @@ def nmlallen(nml_data,onefive=True):
             list_of_dicts.append(temp)
         else:
             list_of_dicts.append(r)
-    #print(list_of_dicts)
-    #import pdb
-    #pdb.set_trace()
+            
+
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
     #print(df)
 
-def giant_frame(allen_analysis,nml_data,onefive=True):
+def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     dfe = nmlefel(nml_data,onefive)
     dfd = nmldm(nml_data)
     dfa = nmlallen(nml_data,onefive)
@@ -516,14 +526,21 @@ def giant_frame(allen_analysis,nml_data,onefive=True):
     
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
-    if onefive:
-        with open(str('onefive_df.pkl'),'wb') as f:
-            pickle.dump(final,f)
+    if other_dir is None:
+        if onefive:
+            with open(str('onefive_df.pkl'),'wb') as f:
+                pickle.dump(final,f)
+        else:
+            with open(str('three_df.pkl'),'wb') as f:
+                pickle.dump(final,f)
 
     else:
-        with open(str('three_df.pkl'),'wb') as f:
-            pickle.dump(final,f)
-
+        if onefive:
+            with open(str(other_dir)+str('/onefive_df.pkl'),'wb') as f:
+                pickle.dump(final,f)
+        else:
+            with open(str(other_dir)+str('/three_df.pkl'),'wb') as f:
+                pickle.dump(final,f)
 
     return final
 

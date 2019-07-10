@@ -229,7 +229,7 @@ class DMTNMLO(object):
 
         except:
             predicted = None
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
         return (test_class,predicted)
 
     def runTest(self):
