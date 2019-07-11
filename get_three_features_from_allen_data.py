@@ -567,11 +567,21 @@ def faster_run_on_allen_revised():
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
+        data_bag = models[0:int(len(models)/4.0)]#,npartitions=8)
+        _ = list(map(model_analysis,data_bag))
+        data_bag = models[int(len(models)/4.0)+1:int(len(models)/2.0)]#,npartitions=8)
+        _ = list(map(model_analysis,data_bag))
+        data_bag = models[int(len(models)/2.0)+1:3*int(len(models)/4.0)]#,npartitions=8)
+        _ = list(map(model_analysis,data_bag))
+        data_bag = models[int(len(models)/4.0):-1]#,npartitions=8)
+        _ = list(map(model_analysis,data_bag))#compute())
 
+        '''
         data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
         _ = list(data_bag.map(model_analysis).compute())
         data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
         _ = list(data_bag.map(model_analysis).compute())
+        '''
     return
 
 '''
