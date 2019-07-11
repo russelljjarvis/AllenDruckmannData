@@ -77,6 +77,7 @@ import dm_test_interoperable #import Interoperabe
 from dask import bag as db
 import glob
 
+import copy
 
 '''
 def get_m_p(model,current):
@@ -321,6 +322,8 @@ def allen_format(volts,times,optional_vm=None):
     all_allen_features = meaned_features_overspikes
     return all_allen_features, allen_features
 
+from elephant.spike_train_generation import threshold_detection
+
 def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     '''
     Conventions:
@@ -418,10 +421,14 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # EFEL features (HBP)
     ##
 
-    efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
-
-    efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
-
+    if len(threshold_detection(model.vm15, threshold=0)):
+        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+    else:
+        efel_15 = None
+    if len(threshold_detection(model.vm30, threshold=0)):
+        efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
+    else:
+        efel_30 = None
     if challenging:
         efel_results_inh = more_challenging(model)
 
@@ -486,7 +493,6 @@ def nmldm(nml_data):
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 
-import copy
 def nmlallen(nml_data,onefive=True):
     indexs = [ nml['model_id'] for nml in nml_data ]
     if onefive:
