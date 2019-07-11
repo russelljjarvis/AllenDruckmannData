@@ -41,3 +41,5 @@ for f in file_paths:
 import os
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
+print('exists cleanly')
+sys.exit(0)

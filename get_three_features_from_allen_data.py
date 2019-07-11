@@ -487,8 +487,10 @@ def model_analysis(model):
         os.mkdir(str('allen_three_feature_folder'))
     except:
         print('directory already exists')
-
-    temp_path = str('allen_three_feature_folder')+str('/')+str(model.name)+str('.p')
+    if hasattr(model,'name'):
+        temp_path = str('allen_three_feature_folder')+str('/')+str(model.name)+str('.p')
+    else:
+        return
     print('exclusion worked',os.path.exists(temp_path))
 
     if type(model) is not type(None) and not os.path.exists(temp_path):
@@ -567,6 +569,16 @@ def faster_run_on_allen_revised():
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
+        data_bag = db.from_sequence(models[0:int(len(models)/4.0)])#,npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+        data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)])#,npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+        data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)])#,npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+        data_bag = db.from_sequence(models[int(len(models)/4.0):-1])#,npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+
+        '''
         data_bag = models[0:int(len(models)/4.0)]#,npartitions=8)
         _ = list(map(model_analysis,data_bag))
         data_bag = models[int(len(models)/4.0)+1:int(len(models)/2.0)]#,npartitions=8)
@@ -576,7 +588,6 @@ def faster_run_on_allen_revised():
         data_bag = models[int(len(models)/4.0):-1]#,npartitions=8)
         _ = list(map(model_analysis,data_bag))#compute())
 
-        '''
         data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
         _ = list(data_bag.map(model_analysis).compute())
         data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
