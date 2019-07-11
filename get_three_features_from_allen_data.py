@@ -364,11 +364,14 @@ def allen_to_model_and_features(content):
     try:
         sweep_numbers = data_set.get_sweep_numbers()
     except:
+        #import pdb; pdb.set_trace()
         print('erroneous deletion of relevant ephys.nwb file')
+        '''
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
 
         data_set = ctc.get_ephys_data(specimen_id)
         sweeps = ctc.get_ephys_sweeps(specimen_id)
+        '''
         file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
         data_set_nwb = NwbDataSet(file_name)
         try:
@@ -484,15 +487,23 @@ def model_analysis(model):
         os.mkdir(str('allen_three_feature_folder'))
     except:
         print('directory already exists')
-    if type(model) is not type(None):
+
+    temp_path = str('allen_three_feature_folder')+str('/')+str(model.name)+str('.p')
+    print('exclusion worked',os.path.exists(temp_path))
+
+    if type(model) is not type(None) and not os.path.exists(temp_path):
+        print('got passed exclusion \n\n\n\n\n')
         three_feature_sets = three_feature_sets_on_static_models(model)
-        try:
-            assert type(model.name) is not None
-            with open(str('allen_three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
-                pickle.dump(three_feature_sets,f)
-        except:
-            print('big error')
-            import pdb; pdb.set_trace()
+        #try:
+        #    assert type(model.name) is not None
+        with open(str('allen_three_feature_folder')+str('/')+str(model.name)+'.p','wb') as f:
+            pickle.dump(three_feature_sets,f)
+        print(os.path.exists(temp_path), 'file wrote')
+        #os.system('ls /allen_three_feature_folder | wc -l')
+
+        #except:
+        #    print('big error')
+        #    import pdb; pdb.set_trace()
     return
 
 
@@ -515,10 +526,12 @@ def run_on_allen(number_d_sets=2):
 
     for model in models:
         #if model is not None:
-        model_analysis(model)
+        temp_path = str('allen_three_feature_folder')+str('/')+str(model.name)+str('.p')
+        if not os.path.exists(temp_path):
+            model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
 def faster_run_on_allen(number_d_sets=200):
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
@@ -540,6 +553,9 @@ def faster_run_on_allen(number_d_sets=200):
         models = [mod[0] for mod in models]
         with open('allen_models.pkl','wb') as f:
             pickle.dump(models,f)
+
+    #    model_analysis(model)
+
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
@@ -547,19 +563,24 @@ def faster_run_on_allen(number_d_sets=200):
     return
 def faster_run_on_allen_revised():
     #import pdb; pdb.set_trace()
-    #if os.path.isfile('allen_models.pkl'):
-        #with open('allen_models.pkl','rb') as f: models = pickle.load(f)
+    try:
+        #assert 1==2
+        if os.path.isfile('allen_models.pkl'):
+            with open('allen_models.pkl','rb') as f: models = pickle.load(f)
 
-        #if len(models) < number_d_sets:
-    data_sets = get_data_sets(lower_bound=0,upper_bound=-1)
-    models = []
-    data_bag = db.from_sequence(data_sets,npartitions=8)
-    models = list(data_bag.map(allen_to_model_and_features).compute())
-    models = [mod for mod in models if mod is not None]
-    models = [mod[0] for mod in models]
-    import pdb; pdb.set_trace()
-    with open('allen_models.pkl','wb') as f:
-        pickle.dump(models,f)
+    except:
+            #if len(models) < number_d_sets:
+        data_sets = get_data_sets(lower_bound=0,upper_bound=-1)
+        models = []
+        data_bag = db.from_sequence(data_sets,npartitions=8)
+        models = list(data_bag.map(allen_to_model_and_features).compute())
+        #models = list(map(allen_to_model_and_features,data_sets))
+
+
+        models = [mod for mod in models if mod is not None]
+        models = [mod[0] for mod in models]
+        with open('allen_models.pkl','wb') as f:
+            pickle.dump(models,f)
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
