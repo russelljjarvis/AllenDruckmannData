@@ -301,8 +301,9 @@ def get_spike_count(model):
 
 def get_data_sets(upper_bound=2,lower_bound=None):
     try:
-        with open('../all_allen_cells.p','rb') as f:
-            cells = pickle.load(f)
+        with open('all_allen_cells.p','rb') as f: cells = pickle.load(f)
+        ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
+
     except:
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
 
@@ -323,6 +324,11 @@ def get_data_sets(upper_bound=2,lower_bound=None):
         limited_range = ids[0:-1]
     elif upper_bound is not None and lower_bound is not None:
         limited_range = ids[lower_bound:upper_bound]
+    cnt=0
+    for specimen_id in limited_range:
+        temp_path = str(path_name)+str('/')+str(specimen_id)+'.p'
+        if os.path.exists(temp_path):
+            cnt+=1
     for specimen_id in limited_range:
         temp_path = str(path_name)+str('/')+str(specimen_id)+'.p'
         if os.path.exists(temp_path):
@@ -330,6 +336,8 @@ def get_data_sets(upper_bound=2,lower_bound=None):
                 (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
             data_sets.append((data_set_nwb,sweeps,specimen_id))
         else:
+            break
+            '''
             data_set = ctc.get_ephys_data(specimen_id)
             sweeps = ctc.get_ephys_sweeps(specimen_id)
 
@@ -340,6 +348,9 @@ def get_data_sets(upper_bound=2,lower_bound=None):
 
             with open(temp_path,'wb') as f:
                 pickle.dump((data_set_nwb,sweeps,specimen_id),f)
+            '''
+    #import pdb; pdb.set_trace()
+
             #broken
     return data_sets
 
@@ -507,6 +518,7 @@ def run_on_allen(number_d_sets=2):
         model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
 def faster_run_on_allen(number_d_sets=200):
+    import pdb; pdb.set_trace()
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
@@ -533,34 +545,26 @@ def faster_run_on_allen(number_d_sets=200):
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     return
+def faster_run_on_allen_revised():
+    #import pdb; pdb.set_trace()
+    #if os.path.isfile('allen_models.pkl'):
+        #with open('allen_models.pkl','rb') as f: models = pickle.load(f)
 
-def faster_make_model_and_cache():
-    '''
-    Synposis:
-
-        Mass download all the NML model waveforms for all cortical regions
-        And perform three types of feature extraction on resulting waveforms.
-
-    Inputs: None
-    Outputs: None in namespace, yet, lots of data written to pickle.
-    '''
-    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
-
-    mid = [] # mid is a list of model identifiers.
-    for k,v in all_the_NML_IDs.items():
-        mid.extend(v[0])
-
-    path_name = str('models')
-    try:
-        os.mkdir(path_name)
-    except:
-        print('model directory already made :)')
-
-    ##
-    # Do the batch model download.
-    ##
-    mid_bag = db.from_sequence(mid,npartitions=8)
-    list(mid_bag.map(mid_to_model).compute())
+        #if len(models) < number_d_sets:
+    data_sets = get_data_sets(lower_bound=0,upper_bound=-1)
+    models = []
+    data_bag = db.from_sequence(data_sets,npartitions=8)
+    models = list(data_bag.map(allen_to_model_and_features).compute())
+    models = [mod for mod in models if mod is not None]
+    models = [mod[0] for mod in models]
+    import pdb; pdb.set_trace()
+    with open('allen_models.pkl','wb') as f:
+        pickle.dump(models,f)
+    data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    return
 
 
 def analyze_models_from_cache(file_paths):
