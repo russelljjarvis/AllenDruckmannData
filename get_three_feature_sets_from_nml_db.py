@@ -482,7 +482,7 @@ def nmldm(nml_data):
             list_of_dicts.append(temp)
         else:
             list_of_dicts.append(r)
-            
+
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 
@@ -505,7 +505,7 @@ def nmlallen(nml_data,onefive=True):
             list_of_dicts.append(temp)
         else:
             list_of_dicts.append(r)
-            
+
 
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
@@ -523,8 +523,8 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     dfa = dfa.append(dfaa)
     dfe = dfe.append(dfea)
     dfd = dfd.append(dfda)
-    #import pdb
     #pdb.set_trace()
+
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
     if other_dir is None:

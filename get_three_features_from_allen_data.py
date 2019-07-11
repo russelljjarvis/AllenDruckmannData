@@ -561,6 +561,20 @@ def faster_run_on_allen(number_d_sets=200):
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     return
+
+
+def faster_run_on_allen_revised():
+    if os.path.isfile('allen_models.pkl'):
+        with open('allen_models.pkl','rb') as f:
+            models = pickle.load(f)
+
+        data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+        data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
+        _ = list(data_bag.map(model_analysis).compute())
+    return
+
+'''
 def faster_run_on_allen_revised():
     #import pdb; pdb.set_trace()
     try:
@@ -586,7 +600,7 @@ def faster_run_on_allen_revised():
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     return
-
+'''
 
 def analyze_models_from_cache(file_paths):
     models = []

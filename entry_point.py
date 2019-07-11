@@ -25,7 +25,9 @@ import glob
 #_ = runnable_nml.analyze_models_from_cache(file_paths)
 
 #runnable_allen.faster_run_on_allen(150)
+#_ = runnable_nml.analyze_models_from_cache(file_paths[0:2])
 runnable_allen.faster_run_on_allen_revised()
+#runnable_allen.faster_run_on_allen_revised()
 
 file_paths = glob.glob("three_feature_folder/*.p")
 nml_data = []
@@ -48,3 +50,7 @@ except:
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=path)
 merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=path)
 print('so it finished')
+
+import os
+merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
+merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
