@@ -23,7 +23,7 @@ import glob
 #runnable_nml.faster_make_model_and_cache()
 #file_paths = glob.glob("models/*.p")
 #_ = runnable_nml.analyze_models_from_cache(file_paths[0:2])
-runnable_allen.faster_run_on_allen_revised()
+#runnable_allen.faster_run_on_allen_revised()
 #runnable_allen.faster_run_on_allen_revised()
 
 file_paths = glob.glob("three_feature_folder/*.p")
