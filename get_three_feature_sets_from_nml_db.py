@@ -482,7 +482,7 @@ def nmldm(nml_data):
             list_of_dicts.append(temp)
         else:
             list_of_dicts.append(r)
-            
+
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 
@@ -505,7 +505,7 @@ def nmlallen(nml_data,onefive=True):
             list_of_dicts.append(temp)
         else:
             list_of_dicts.append(r)
-            
+
 
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
@@ -520,10 +520,10 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     dfda = nmldm(allen_analysis)
     dfaa = nmlallen(allen_analysis,onefive)
 
-    dfa.append(dfaa)
-    dfe.append(dfea)
-    dfd.append(dfda)
-    
+    dfa = dfa.append(dfaa)
+    dfe = dfe.append(dfea)
+    dfd = dfd.append(dfda)
+
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
     if other_dir is None:
@@ -692,7 +692,7 @@ def faster_feature_extraction():
     file_paths = glob.glob("models/*.p")
     if file_paths:
         if len(file_paths)==len(all_the_NML_IDs):
-            _ = analyze_models_from_cache(file_paths)
+            _ = analyze_modelgs_from_cache(file_paths)
         else:
             _ = faster_make_model_and_cache()
     else:
