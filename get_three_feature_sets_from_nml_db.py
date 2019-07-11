@@ -520,10 +520,11 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     dfda = nmldm(allen_analysis)
     dfaa = nmlallen(allen_analysis,onefive)
 
-    dfa.append(dfaa)
-    dfe.append(dfea)
-    dfd.append(dfda)
-    
+    dfa = dfa.append(dfaa)
+    dfe = dfe.append(dfea)
+    dfd = dfd.append(dfda)
+    #import pdb
+    #pdb.set_trace()
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
     if other_dir is None:
