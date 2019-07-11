@@ -469,7 +469,20 @@ def nmlefel(nml_data,onefive=True):
         rows = [ nml['efel_30'] for nml in nml_data ]
     list_of_dicts = []
     for r in rows:
-        list_of_dicts.append(r[0])
+        if r is None:
+            #import pdb
+            #pdb.set_trace()
+            # write in a data frame entry for a non spiking model
+            temp = {}
+            #print(rows[0])
+            temp = copy.copy(rows[0][0])
+            for k,v in temp.items():
+                temp[k] = None
+            list_of_dicts.append(temp)
+        else:
+            list_of_dicts.append(r[0])
+
+    #list_of_dicts.append(r[0])
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 
@@ -529,6 +542,7 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     dfa = dfa.append(dfaa)
     dfe = dfe.append(dfea)
     dfd = dfd.append(dfda)
+    #pdb.set_trace()
 
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
     final = pd.merge(merged, dfa, right_index=True, left_index=True)
@@ -698,7 +712,7 @@ def faster_feature_extraction():
     file_paths = glob.glob("models/*.p")
     if file_paths:
         if len(file_paths)==len(all_the_NML_IDs):
-            _ = analyze_modelgs_from_cache(file_paths)
+            _ = analyze_models_from_cache(file_paths)
         else:
             _ = faster_make_model_and_cache()
     else:
