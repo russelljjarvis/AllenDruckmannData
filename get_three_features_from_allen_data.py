@@ -299,6 +299,21 @@ def get_spike_count(model):
 
 
 
+def get_data_sets_from_cache():
+    path_name = 'data_nwbs'
+    files = glob.glob(path_name+'/*.p')
+    data_sets = []
+    for temp_path in files:
+        print(temp_path)
+        if os.path.exists(temp_path):
+            with open(temp_path,'rb') as f:
+                (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
+            data_sets.append((data_set_nwb,sweeps,specimen_id))
+            allen_to_model_and_features(data_sets[-1])
+    return data_sets
+
+
+
 def get_data_sets(upper_bound=2,lower_bound=None):
     try:
         with open('all_allen_cells.p','rb') as f: cells = pickle.load(f)
@@ -336,8 +351,7 @@ def get_data_sets(upper_bound=2,lower_bound=None):
                 (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
             data_sets.append((data_set_nwb,sweeps,specimen_id))
         else:
-            break
-            '''
+
             data_set = ctc.get_ephys_data(specimen_id)
             sweeps = ctc.get_ephys_sweeps(specimen_id)
 
@@ -348,10 +362,6 @@ def get_data_sets(upper_bound=2,lower_bound=None):
 
             with open(temp_path,'wb') as f:
                 pickle.dump((data_set_nwb,sweeps,specimen_id),f)
-            '''
-    #import pdb; pdb.set_trace()
-
-            #broken
     return data_sets
 
 
@@ -532,12 +542,13 @@ def run_on_allen(number_d_sets=2):
         if not os.path.exists(temp_path):
             model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
-def faster_run_on_allen(number_d_sets=200):
+def faster_run_on_allen(number_d_sets=1300):
     #import pdb; pdb.set_trace()
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
         if len(models) < number_d_sets:
+            print(len(models),number_d_sets)
             data_sets = get_data_sets(lower_bound=len(models),upper_bound=number_d_sets)
             models = []
             data_bag = db.from_sequence(data_sets,npartitions=8)
@@ -547,7 +558,7 @@ def faster_run_on_allen(number_d_sets=200):
             with open('allen_models.pkl','wb') as f:
                 pickle.dump(models,f)
     else:
-        data_sets = get_data_sets(lower_bound=number_d_sets)
+        data_sets = get_data_sets(lower_bound=0,upper_bound=number_d_sets)
         models = []
         data_bag = db.from_sequence(data_sets,npartitions=8)
         models = list(data_bag.map(allen_to_model_and_features).compute())
@@ -557,43 +568,55 @@ def faster_run_on_allen(number_d_sets=200):
             pickle.dump(models,f)
 
     #    model_analysis(model)
+    data_bag = db.from_sequence(models[0:int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    '''
 
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
+    '''
     return
 
 
-def faster_run_on_allen_revised():
-    if os.path.isfile('allen_models.pkl'):
-        with open('allen_models.pkl','rb') as f:
-            models = pickle.load(f)
-        data_bag = db.from_sequence(models[0:int(len(models)/4.0)])#,npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
-        data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)])#,npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
-        data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)])#,npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
-        data_bag = db.from_sequence(models[int(len(models)/4.0):-1])#,npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
+def faster_run_on_allen_cached():
 
-        '''
-        data_bag = models[0:int(len(models)/4.0)]#,npartitions=8)
-        _ = list(map(model_analysis,data_bag))
-        data_bag = models[int(len(models)/4.0)+1:int(len(models)/2.0)]#,npartitions=8)
-        _ = list(map(model_analysis,data_bag))
-        data_bag = models[int(len(models)/2.0)+1:3*int(len(models)/4.0)]#,npartitions=8)
-        _ = list(map(model_analysis,data_bag))
-        data_bag = models[int(len(models)/4.0):-1]#,npartitions=8)
-        _ = list(map(model_analysis,data_bag))#compute())
 
-        data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
-        data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
-        _ = list(data_bag.map(model_analysis).compute())
-        '''
+    data_sets = get_data_sets_from_cache()#(lower_bound=len(models),upper_bound=number_d_sets)
+    models = []
+    data_bag = db.from_sequence(data_sets,npartitions=8)
+    models = list(data_bag.map(allen_to_model_and_features).compute())
+    data_bag = db.from_sequence(models[0:int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
     return
+'''
+data_bag = models[0:int(len(models)/4.0)]#,npartitions=8)
+_ = list(map(model_analysis,data_bag))
+data_bag = models[int(len(models)/4.0)+1:int(len(models)/2.0)]#,npartitions=8)
+_ = list(map(model_analysis,data_bag))
+data_bag = models[int(len(models)/2.0)+1:3*int(len(models)/4.0)]#,npartitions=8)
+_ = list(map(model_analysis,data_bag))
+data_bag = models[int(len(models)/4.0):-1]#,npartitions=8)
+_ = list(map(model_analysis,data_bag))#compute())
+
+data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
+_ = list(data_bag.map(model_analysis).compute())
+data_bag = db.from_sequence(models[int(len(models)/2.0)+1:-1],npartitions=8)
+_ = list(data_bag.map(model_analysis).compute())
+'''
 
 '''
 def faster_run_on_allen_revised():

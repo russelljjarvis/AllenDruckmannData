@@ -469,7 +469,20 @@ def nmlefel(nml_data,onefive=True):
         rows = [ nml['efel_30'] for nml in nml_data ]
     list_of_dicts = []
     for r in rows:
-        list_of_dicts.append(r[0])
+        if r is None:
+            #import pdb
+            #pdb.set_trace()
+            # write in a data frame entry for a non spiking model
+            temp = {}
+            #print(rows[0])
+            temp = copy.copy(rows[0][0])
+            for k,v in temp.items():
+                temp[k] = None
+            list_of_dicts.append(temp)
+        else:
+            list_of_dicts.append(r[0])
+
+    #list_of_dicts.append(r[0])
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
 

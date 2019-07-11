@@ -26,8 +26,10 @@ import glob
 
 #runnable_allen.faster_run_on_allen(150)
 #_ = runnable_nml.analyze_models_from_cache(file_paths[0:2])
-runnable_allen.faster_run_on_allen_revised()
-#runnable_allen.faster_run_on_allen_revised()
+
+#runnable_allen.faster_run_on_allen_cached()
+
+runnable_allen.faster_run_on_allen()
 
 file_paths = glob.glob("three_feature_folder/*.p")
 nml_data = []
