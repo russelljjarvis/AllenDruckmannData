@@ -20,11 +20,12 @@ import glob
 # The faster way to complete everything when confident
 ##
 
-runnable_nml.faster_make_model_and_cache()
-file_paths = glob.glob("models/*.p")
-_ = runnable_nml.analyze_models_from_cache(file_paths)
+#runnable_nml.faster_make_model_and_cache()
+#file_paths = glob.glob("models/*.p")
+#_ = runnable_nml.analyze_models_from_cache(file_paths)
 
-runnable_allen.faster_run_on_allen(150)
+#runnable_allen.faster_run_on_allen(150)
+runnable_allen.faster_run_on_allen_revised()
 
 file_paths = glob.glob("three_feature_folder/*.p")
 nml_data = []
@@ -37,8 +38,6 @@ file_paths = glob.glob("allen_three_feature_folder/*.p")
 allen_analysis = []
 for f in file_paths:
     allen_analysis.append(pickle.load(open(f,'rb')))
-#import pdb
-#pdb.set_trace()
 path=str('new_dir')
 
 try:
