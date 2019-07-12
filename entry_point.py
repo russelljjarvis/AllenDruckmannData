@@ -7,8 +7,8 @@ import glob
 import pickle
 import pandas as pd
 import numpy as np
-#import glob
-import os
+import glob
+
 
 ##
 # The slow old way
@@ -27,6 +27,7 @@ _ = runnable_nml.analyze_models_from_cache(file_paths)
 #runnable_allen.faster_run_on_allen(150)
 #_ = runnable_nml.analyze_models_from_cache(file_paths[0:2])
 
+#runnable_allen.faster_run_on_allen_cached()
 
 runnable_allen.faster_run_on_allen()
 runnable_allen.faster_run_on_allen_cached()
