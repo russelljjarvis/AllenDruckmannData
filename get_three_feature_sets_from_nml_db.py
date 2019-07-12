@@ -260,6 +260,7 @@ def get_static_models(cell_id):
     model.vminh =  model.inject_square_current(current)
 
     return model
+from elephant.spike_train_generation import threshold_detection
 
 def allen_format(volts,times,optional_vm=None):
     '''
@@ -279,7 +280,6 @@ def allen_format(volts,times,optional_vm=None):
 
     '''
     if optional_vm is not None:
-        from elephant.spike_train_generation import threshold_detection
 
         spike_train = threshold_detection(optional_vm, threshold=0)
 
@@ -324,7 +324,7 @@ def allen_format(volts,times,optional_vm=None):
 
 from elephant.spike_train_generation import threshold_detection
 
-def three_feature_sets_on_static_models(model,debug = False, challenging=False):
+def three_feature_sets_on_static_models(model,unit_test = False, challenging=False):
     '''
     Conventions:
         variables ending with 15 refer to 1.5 current injection protocols.
@@ -357,7 +357,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # Allen Features
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    all_allen_features30, allen_features = allen_format(volts,times,optional_vm=model.vm30)
+    all_allen_features30, allen_features30 = allen_format(volts,times,optional_vm=model.vm30)
     #if frame30 is not None:
     #    frame30['protocol'] = 3.0
     ##
@@ -372,27 +372,25 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     # Allen Features
     ##
 
-    all_allen_features15, allen_features = allen_format(volts,times,optional_vm=model.vm15)
+    all_allen_features15, allen_features15 = allen_format(volts,times,optional_vm=model.vm15)
     ##
     # Get Druckman features, this is mainly handled in external files.
     ##
     #if model.ir_currents
-    if hasattr(model,'druckmann2013_input_resistance_currents'):
-        DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO = dm_test_interoperable.DMTNMLO()
+        
+    if hasattr(model,'druckmann2013_input_resistance_currents') and not hasattr(model,'allen'):
         DMTNMLO.test_setup(None,None,model= model)
-        dm_test_features = DMTNMLO.runTest()
+  
     else:
-        dm_test_features = None
-    #for d in dm_test_features:
-    #    if d is None:
+        DMTNMLO.test_setup(None,None,model= model,ir_current_limited=True)
+    dm_test_features = DMTNMLO.runTest()
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
     trace3 = {}
     trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
     trace3['V'] = [ float(v) for v in model.vm30.magnitude]#temp_vm
-    #trace3['peak_voltage'] = [ np.max(model.vm30) ]
-
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
     if not hasattr(model,'allen'):
         trace3['stim_end'] = [ trace3['T'][-1] ]
@@ -407,6 +405,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
     trace15['V'] = [ float(v) for v in model.vm15.magnitude ]#temp_vm
+    
     if not hasattr(model,'allen'):
         trace15['stim_end'] = [ trace15['T'][-1] ]
         trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
@@ -416,6 +415,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
     trace15['stim_end'] = [ trace15['T'][-1] ]
     traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+
     ##
     # Compute
     # EFEL features (HBP)
@@ -424,11 +424,28 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     if len(threshold_detection(model.vm15, threshold=0)):
         efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
     else:
-        efel_15 = None
+        trace15['peak_voltage'] = [ np.max(model.vm15) ]
+
+        traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))
+        print('if this works, no need to upward offset results')
+        
+        offset = float(np.abs(0-np.max(model.vm15.magnitude-0.2*np.abs(np.std(model.vm15.magnitude)))))
+        trace15['V'] = [ float(v)+offset for v in model.vm15.magnitude ]#temp_vm
+        trace15['peak_voltage'] = [ np.max(model.vm15) ]
+
+        traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))
+    
+        #efel_15 = None
     if len(threshold_detection(model.vm30, threshold=0)):
         efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
     else:
-        efel_30 = None
+        offset = float(np.abs(0-np.max(model.vm30.magnitude-0.2*np.abs(np.std(model.vm30.magnitude)))))
+        trace3['V'] = [ float(v)+offset for v in model.vm30.magnitude ]#temp_vm
+        traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+        efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))
+    
     if challenging:
         efel_results_inh = more_challenging(model)
 
@@ -436,7 +453,7 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
     if challenging:
         nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
 
-    if debug == True:
+    if unit_test == True:
         ##
         # sort of a bit like unit testing, but causes a dowload which slows everything down:
         ##
@@ -455,9 +472,9 @@ def three_feature_sets_on_static_models(model,debug = False, challenging=False):
 
     print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
     if hasattr(model,'information'):
-        return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+        return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':allen_features15,'allen_30':allen_features30}
     else:
-        return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+        return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':allen_features15,'allen_30':allen_features30}
 
 
 
@@ -625,6 +642,10 @@ def mid_to_model(mid_):
         os.mkdir(str('models'))
     except:
         pass
+    path = str('models')+str('/')+str(mid_[1])+'.p'
+    if os.path.exists(path):
+        return
+    
     model = get_static_models(mid_[1])
     if type(model) is not type(None):
         model.name = None
@@ -650,26 +671,18 @@ def faster_make_model_and_cache():
     '''
     try:
         #assert 1==2
-        model_information =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+        mid =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     except:
         with open('cortical_tags.csv','rt') as csvfile:
             reader = csv.reader(csvfile,delimiter=',',quotechar='|')
-            model_information = [row for row in reader]
+            mid = [row for row in reader]
 
             with open('cortical_NML_IDs/cortical_cells_list.p','wb') as f :
-                pickle.dump(model_information,f)
+                pickle.dump(mid,f)
 
-    mid = model_information
+    #mid = model_information
     #[row for row in model_information]
     mid = mid[1:-1]
-
-
-    #pdb.set_trace()
-    '''
-    mid = [] # mid is a list of model identifiers.
-    for k,v in all_the_NML_IDs.items():
-        mid.extend(v[0])
-    '''
     path_name = str('models')
     try:
         os.mkdir(path_name)
@@ -702,10 +715,22 @@ def analyze_models_from_cache(file_paths):
 
     models = [m for m in models if m.vm30 is not None]
     print('use-able Available Models: ',len(models))
-    #import pdb
-    #ipdb.set_trace()
-    models_bag = db.from_sequence(models,npartitions=8)
-    list(models_bag.map(model_analysis).compute())
+
+    m_temp = []
+    for m in models:
+        path = str('three_feature_folder')+str('/')+str(m.name)+str('.p')
+        if not os.path.exists(path):
+            m_temp.append(m)
+              
+    models = m_temp
+    data_bag = db.from_sequence(models[0:int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
 
 def faster_feature_extraction():
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))

@@ -107,7 +107,7 @@ class DMTNMLO(object):
         for i, v in enumerate(expected_values):
             self.test_set[i]['expected'] = v
 
-    def test_setup(self,model_id,model_dict,model=None):
+    def test_setup(self,model_id,model_dict,model=None,ir_current_limited=False):
         '''
         Synopsis: Construct initialize and otherwise setup Druckman tests.
         if a model does not exist yet, but a desired NML-DB model id is known, use the model-id
@@ -139,7 +139,7 @@ class DMTNMLO(object):
             self.standard = model.druckmann2013_standard_current
             self.strong = model.druckmann2013_strong_current
             self.ir_currents = model.druckmann2013_input_resistance_currents
-        self.test_set = [
+            self.test_set = [
             {'test': AP12AmplitudeDropTest(self.standard), 'units': pq.mV, 'expected': None},
             {'test': AP1SSAmplitudeChangeTest(self.standard), 'units': pq.mV, 'expected': None},
             {'test': AP1AmplitudeTest(self.standard), 'units': pq.mV, 'expected': None},
@@ -178,8 +178,9 @@ class DMTNMLO(object):
             {'test': AP2DelaySDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             {'test': Burst1ISIMeanStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             {'test': Burst1ISISDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
-        ]
-
+            ]
+        if if_current_limited==True:
+            del self.test_set.remove[16]
         self.set_expected(self.expected)
         #import pdb; pdb.set_trace()
 
