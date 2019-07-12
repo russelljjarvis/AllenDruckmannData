@@ -420,32 +420,35 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     # Compute
     # EFEL features (HBP)
     ##
+    efel.reset()
 
     if len(threshold_detection(model.vm15, threshold=0)):
-        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+        efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
     else:
-        trace15['peak_voltage'] = [ np.max(model.vm15) ]
+        #trace15['peak_voltage'] = [ np.max(model.vm15) ]
 
-        traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))
-        print('if this works, no need to upward offset results')
+
+        threshold = float(np.max(model.vm15.magnitude-0.2*np.abs(np.std(model.vm15.magnitude))))
+        efel.setThreshold(threshold)
+
+     
         
-        offset = float(np.abs(0-np.max(model.vm15.magnitude-0.2*np.abs(np.std(model.vm15.magnitude)))))
-        trace15['V'] = [ float(v)+offset for v in model.vm15.magnitude ]#temp_vm
-        trace15['peak_voltage'] = [ np.max(model.vm15) ]
-
         traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-        efel_15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))
+        efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
     
         #efel_15 = None
+    print(efel.getFeatureNames())
     if len(threshold_detection(model.vm30, threshold=0)):
-        efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
+        efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))#
     else:
-        offset = float(np.abs(0-np.max(model.vm30.magnitude-0.2*np.abs(np.std(model.vm30.magnitude)))))
-        trace3['V'] = [ float(v)+offset for v in model.vm30.magnitude ]#temp_vm
+        threshold = float(np.max(model.vm30.magnitude-0.2*np.abs(np.std(model.vm30.magnitude))))
+        efel.setThreshold(threshold)
+
+     
+        #trace3['V'] = [ float(v)+offset for v in model.vm30.magnitude ]#temp_vm
         traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-        efel_30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))
-    
+        efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+    '''
     if challenging:
         efel_results_inh = more_challenging(model)
 
@@ -465,12 +468,11 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
         print('above 0mV, so 0 spikes using the threshold technique is not final')
         print('druckman tests use derivative approach')
 
-        # print(len(DMTNMLO.model.nmldb_model.get_APs()))
-
+    
         print(len(sf.get_spike_train(model.vm30))>1)
         print(len(sf.get_spike_train(model.vm15))>1)
-
-    print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
+    '''
+    #print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
     if hasattr(model,'information'):
         return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':allen_features15,'allen_30':allen_features30}
     else:
@@ -708,30 +710,30 @@ def model_analysis(model):
     return
 
 def analyze_models_from_cache(file_paths):
-    models = []
-    for f in file_paths:
-        models.append(pickle.load(open(f,'rb')))
-    print('Available Models: ',len(models))
+    models = (pickle.load(open(f,'rb')) for f in file_paths )
+    #models.append()
+    #print('Available Models: ',len(models))
 
-    models = [m for m in models if m.vm30 is not None]
-    print('use-able Available Models: ',len(models))
+    models = (m for m in models if m.vm30 is not None)
+    #print('use-able Available Models: ',len(models))
 
-    m_temp = []
-    for m in models:
-        path = str('three_feature_folder')+str('/')+str(m.name)+str('.p')
-        if not os.path.exists(path):
-            m_temp.append(m)
-              
-    models = m_temp
-    data_bag = db.from_sequence(models[0:int(len(models)/4.0)],npartitions=8)
+    #m_temp = []
+    models = (m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')))
+    #m_temp.append(m)
+    #models = m_temp
+    data_bag = db.from_sequence(models,npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)],npartitions=8)
-    _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence(models[int(len(models)/2.0)+1:3*int(len(models)/4.0)],npartitions=8)
-    _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
+    '''
+    data_bag = db.from_sequence(models[0:int(len(file_paths)/4.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
 
+    data_bag = db.from_sequence(models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    data_bag = db.from_sequence(models[int(len(file_paths)/4.0):-1],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    '''
 def faster_feature_extraction():
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     file_paths = glob.glob("models/*.p")

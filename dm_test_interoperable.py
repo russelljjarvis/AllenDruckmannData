@@ -179,7 +179,7 @@ class DMTNMLO(object):
             {'test': Burst1ISIMeanStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             {'test': Burst1ISISDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             ]
-        if if_current_limited==True:
+        if ir_current_limited==True:
             del self.test_set.remove[16]
         self.set_expected(self.expected)
         #import pdb; pdb.set_trace()
