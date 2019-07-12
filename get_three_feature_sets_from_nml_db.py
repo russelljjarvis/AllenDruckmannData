@@ -649,7 +649,6 @@ def faster_make_model_and_cache():
     Outputs: None in namespace, yet, lots of data written to pickle.
     '''
     try:
-        #assert 1==2
         model_information =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     except:
         with open('cortical_tags.csv','rt') as csvfile:
@@ -663,13 +662,6 @@ def faster_make_model_and_cache():
     #[row for row in model_information]
     mid = mid[1:-1]
 
-
-    #pdb.set_trace()
-    '''
-    mid = [] # mid is a list of model identifiers.
-    for k,v in all_the_NML_IDs.items():
-        mid.extend(v[0])
-    '''
     path_name = str('models')
     try:
         os.mkdir(path_name)
