@@ -79,84 +79,6 @@ import glob
 
 import copy
 
-'''
-def get_m_p(model,current):
-    #synopsis:
-    #    get_m_p belongs to a 3 method stack (2 below)
-
-    #replace get_membrane_potential in a NU model class with a statically defined lookup table.
-
-
-    try:
-        consolted = model.lookup[float(current['amplitude'])]
-    except:
-        consolted = model.lookup[float(current['injected_square_current']['amplitude'])]
-    return consolted
-
-def update_static_model_methods(model,lookup):
-
-    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    #with methods for querying a lookup table, such that given a current injection,
-    #a V_{m} is returned.
-
-    model.lookup = lookup
-    model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-
-    return model#, tests
-
-#Depreciated
-def map_to_sms(tt):
-
-    # given a list of static models, update the static models methods
-    #for model in sms:
-    #model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-    for t in tt:
-        if 'RheobaseTest' in t.name:
-            t.generate_prediction = MethodType(generate_prediction,t)
-    return sms
-
-def standard_nu_tests(model):
-
-    #Do standard NU predictions, to do this may need to overwrite generate_prediction
-    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    #with methods for querying a lookup table, such that given a current injection,
-    #a V_{m} is returned.
-
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    #model = update_static_model_methods(model,lookup)
-    nu_preds = []
-    for t in local_tests:
-        if str('Rheobase') not in t.name:
-            #import pdb; pdb.set_trace()
-            try:
-                pred = t.generate_prediction(model)
-            except:
-                pred = None
-        nu_preds.append(pred)
-    return nu_preds
-
-
-def standard_nu_tests(model,lookup):
-
-    #Do standard NU predictions, to do this may need to overwrite generate_prediction
-    #Overwrite/ride. a NU models inject_square_current,generate_prediction methods
-    #with methods for querying a lookup table, such that given a current injection,
-    #a V_{m} is returned.
-
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    model = update_static_model_methods(model,lookup)
-    nu_preds = []
-    for t in local_tests:
-        #import pdb; pdb.set_trace()
-        try:
-            pred = t.generate_prediction(model)
-        except:
-            pred = None
-        nu_preds.append(pred)
-    return nu_preds
-'''
 
 def crawl_ids(url):
     ''' move to aibs '''
@@ -320,10 +242,10 @@ def allen_format(volts,times,optional_vm=None):
 
 
     meaned_features_overspikes.update(meaned_features_1)
-    all_allen_features = meaned_features_overspikes
-    return all_allen_features, allen_features
+    #all_allen_features = meaned_features_overspikes
+    return meaned_features_overspikes, allen_features
 
-from elephant.spike_train_generation import threshold_detection
+#from elephant.spike_train_generation import threshold_detection
 
 def three_feature_sets_on_static_models(model,unit_test = False, challenging=False):
     '''
@@ -424,60 +346,52 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     efel.reset()
 
     if len(threshold_detection(model.vm15, threshold=0)):
-        efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
+        #pass
+        threshold = float(np.max(model.vm15.magnitude)-0.5*np.abs(np.std(model.vm15.magnitude)))
+ 
+        print(len(threshold_detection(model.vm15, threshold=threshold)))
+        print(threshold,'threshold', np.max(model.vm15.magnitude),np.min(model.vm15.magnitude))
+
+        #efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
     else:
-        #trace15['peak_voltage'] = [ np.max(model.vm15) ]
-
-
-        threshold = float(np.max(model.vm15.magnitude-0.2*np.abs(np.std(model.vm15.magnitude))))
+        threshold = float(np.max(model.vm15.magnitude)-0.2*np.abs(np.std(model.vm15.magnitude)))
+ 
         efel.setThreshold(threshold)
-
-     
+        print(len(threshold_detection(model.vm15, threshold=threshold)))
+        print(threshold,'threshold', np.max(model.vm15.magnitude))
         
-        traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    if np.min(model.vm15.magnitude)<0:
         efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
-    
-        #efel_15 = None
-    print(efel.getFeatureNames())
+    else:
+        efel_15 = None
+    efel.reset()
+
     if len(threshold_detection(model.vm30, threshold=0)):
-        efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))#
+        threshold = float(np.max(model.vm30.magnitude)-0.5*np.abs(np.std(model.vm30.magnitude)))
+ 
+        print(len(threshold_detection(model.vm30, threshold=threshold)))
+        print(threshold,'threshold', np.max(model.vm30.magnitude),np.min(model.vm30.magnitude))
+
+    #efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+
+        #pass
     else:
-        threshold = float(np.max(model.vm30.magnitude-0.2*np.abs(np.std(model.vm30.magnitude))))
+        threshold = float(np.max(model.vm30.magnitude)-0.2*np.abs(np.std(model.vm30.magnitude)))
         efel.setThreshold(threshold)
+        print(len(threshold_detection(model.vm15, threshold=threshold)))
+        print(threshold,'threshold', np.max(model.vm15.magnitude))
 
-     
-        #trace3['V'] = [ float(v)+offset for v in model.vm30.magnitude ]#temp_vm
-        traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    if np.min(model.vm30.magnitude)<0:    
         efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
-    '''
-    if challenging:
-        efel_results_inh = more_challenging(model)
-
-
-    if challenging:
-        nu_preds = standard_nu_tests_two(DMTNMLO.model.nmldb_model)
-
-    if unit_test == True:
-        ##
-        # sort of a bit like unit testing, but causes a dowload which slows everything down:
-        ##
-        assert DMTNMLO.model.druckmann2013_standard_current != DMTNMLO.model.druckmann2013_strong_current
-        from neuronunit.capabilities import spike_functions as sf
-        _ = not_necessary_for_program_completion(DMTNMLO)
-        print('note: False in evidence of spiking is not completely damning \n')
-        print('a threshold of 0mV is used to detect spikes, many models dont have a peak amp')
-        print('above 0mV, so 0 spikes using the threshold technique is not final')
-        print('druckman tests use derivative approach')
-
-    
-        print(len(sf.get_spike_train(model.vm30))>1)
-        print(len(sf.get_spike_train(model.vm15))>1)
-    '''
-    #print('\n\n\n\n\n\n successful run \n\n\n\n\n\n')
-    if hasattr(model,'information'):
-        return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':allen_features15,'allen_30':allen_features30}
     else:
-        return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':allen_features15,'allen_30':allen_features30}
+        efel_30 = None
+        
+    efel.reset()
+    
+    if hasattr(model,'information'):
+        return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+    else:
+        return {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
 
 
 
@@ -490,8 +404,6 @@ def nmlefel(nml_data,onefive=True):
     list_of_dicts = []
     for r in rows:
         if r is None:
-            #import pdb
-            #pdb.set_trace()
             # write in a data frame entry for a non spiking model
             temp = {}
             #print(rows[0])
@@ -598,9 +510,6 @@ def recoverable_interuptable_batch_process():
     mid =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     mid = mid[1:-1]
 
-    #mid = [] # mid is a list of model identifiers.
-    #for v in all_the_NML_IDs.values():
-    #    mid.extend(v[0])
     path_name = str('three_feature_folder')
     try:
         os.mkdir(path_name)
@@ -660,7 +569,9 @@ def mid_to_model(mid_):
 
 import csv
 
-#def map_info_onto_model():
+
+import dask
+import dask.array as da
 
 def faster_make_model_and_cache():
     '''
@@ -673,7 +584,6 @@ def faster_make_model_and_cache():
     Outputs: None in namespace, yet, lots of data written to pickle.
     '''
     try:
-        #assert 1==2
         mid =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     except:
         with open('cortical_tags.csv','rt') as csvfile:
@@ -682,10 +592,8 @@ def faster_make_model_and_cache():
 
             with open('cortical_NML_IDs/cortical_cells_list.p','wb') as f :
                 pickle.dump(mid,f)
-
-    #mid = model_information
-    #[row for row in model_information]
-    mid = mid[1:-1]
+    size = len(mid[1:-1])
+    mid =( m for m in mid[1:-1] ) # mid needs to be generator to not cause memory problems.
     path_name = str('models')
     try:
         os.mkdir(path_name)
@@ -695,8 +603,16 @@ def faster_make_model_and_cache():
     ##
     # Do the batch model download.
     ##
-    mid_bag = db.from_sequence(mid,npartitions=8)
-    list(mid_bag.map(mid_to_model).compute())
+    lazy_arrays = [dask.delayed(mid_to_model)(m) for m in mid]
+    [ l.compute() for l in lazy_arrays ]
+
+    #[ l.compute() for l in lazy_arrays[int(size/4.0):int(size/2.0)] ]
+    #[ l.compute() for l in lazy_arrays[int(size/2.0):3*int(size/4.0) ] ]
+    #[ l.compute() for l in lazy_arrays[int(3.0*size/4.0):-1] ]
+    
+
+    #mid_bag = db.from_sequence(mid,npartitions=8)
+    #list(mid_bag.map(mid_to_model).compute())
 
 def model_analysis(model):
     if type(model) is not type(None):
@@ -712,29 +628,47 @@ def model_analysis(model):
 
 def analyze_models_from_cache(file_paths):
     models = (pickle.load(open(f,'rb')) for f in file_paths )
-    #models.append()
-    #print('Available Models: ',len(models))
-
+    viable_paths = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
+   
     models = (m for m in models if m.vm30 is not None)
-    #print('use-able Available Models: ',len(models))
+    models = ( m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) )
+   
+    
 
-    #m_temp = []
-    models = (m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')))
-    #m_temp.append(m)
-    #models = m_temp
-    data_bag = db.from_sequence(models,npartitions=8)
-    _ = list(data_bag.map(model_analysis).compute())
-    '''
-    data_bag = db.from_sequence(models[0:int(len(file_paths)/4.0)],npartitions=8)
-    _ = list(data_bag.map(model_analysis).compute())
+    #arrays = [da.from_delayed(lazy_image,           # Construct a small Dask array
+    #                                                    dtype=sample.dtype,   # for every lazy value
+    #                                                    shape=sample.shape)
+    #                    for lazy_image in models]
 
-    data_bag = db.from_sequence(models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)],npartitions=8)
+    #stack = da.stack(arrays, axis=0)                # Stack all small Dask arrays into one
+
+    #_ = list(b.map(model_analysis).compute())
+    #return
+    ##ma = da(models,chunks=8)
+    #ma.apply_ufunc(model_analysis)
+    #return
+    
+
+    #data_bag = db.from_sequence(models,npartitions=8)
+    lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
+        #import xarray.ufuncs as xu
+    [ l.compute() for l in lazy_arrays ]
+
+    #except:
+    file_paths = viable_paths
+    #models = ( dask.delayed(i) for i in models )
+
+    data_bag = db.from_delayed([dask.delayed(m) for m in models[0:int(len(file_paths)/4.0)] ],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence(models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)],npartitions=8)
+    data_bag = db.from_delayed([dask.delayed(m) for m in models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)]],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence(models[int(len(file_paths)/4.0):-1],npartitions=8)
+    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)]],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-    '''
+    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/4.0):-1]],npartitions=8)
+    _ = list(data_bag.map(model_analysis).compute())
+    #except:
+     
+    
 def faster_feature_extraction():
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     file_paths = glob.glob("models/*.p")

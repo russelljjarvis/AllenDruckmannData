@@ -542,17 +542,22 @@ def run_on_allen(number_d_sets=2):
         if not os.path.exists(temp_path):
             model_analysis(model)
         #three_feature_sets.append(three_feature_sets_on_static_models(model))
+
 def faster_run_on_allen(number_d_sets=1300):
-    #import pdb; pdb.set_trace()
     if os.path.isfile('allen_models.pkl'):
         with open('allen_models.pkl','rb') as f:
             models = pickle.load(f)
         if len(models) < number_d_sets:
             print(len(models),number_d_sets)
             data_sets = get_data_sets(lower_bound=len(models),upper_bound=number_d_sets)
-            models = []
-            data_bag = db.from_sequence(data_sets,npartitions=8)
-            models = list(data_bag.map(allen_to_model_and_features).compute())
+            #models = []
+
+            lazy_arrays = [dask.delayed(allen_to_model_and_features)(m) for m in data_sets]
+            models = [ l.compute() for l in lazy_arrays ]
+
+                    
+            #data_bag = db.from_sequence(data_sets,npartitions=8)
+            #models = list(data_bag.map(allen_to_model_and_features).compute())
             models = [mod for mod in models if mod is not None]
             models = [mod[0] for mod in models]
             with open('allen_models.pkl','wb') as f:
@@ -568,6 +573,10 @@ def faster_run_on_allen(number_d_sets=1300):
             pickle.dump(models,f)
 
     #    model_analysis(model)
+
+    lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
+    [ l.compute() for l in lazy_arrays ]
+    '''
     data_bag = db.from_sequence(models[0:int(len(models)/4.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/4.0)+1:int(len(models)/2.0)],npartitions=8)
@@ -576,7 +585,7 @@ def faster_run_on_allen(number_d_sets=1300):
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-    '''
+   
 
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
