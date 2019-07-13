@@ -301,10 +301,10 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     ##
     #if model.ir_currents
     DMTNMLO = dm_test_interoperable.DMTNMLO()
-        
+
     if hasattr(model,'druckmann2013_input_resistance_currents') and not hasattr(model,'allen'):
         DMTNMLO.test_setup(None,None,model= model)
-  
+
     else:
         DMTNMLO.test_setup(None,None,model= model,ir_current_limited=True)
     dm_test_features = DMTNMLO.runTest()
@@ -328,7 +328,7 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
     trace15['V'] = [ float(v) for v in model.vm15.magnitude ]#temp_vm
-    
+
     if not hasattr(model,'allen'):
         trace15['stim_end'] = [ trace15['T'][-1] ]
         trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
@@ -348,18 +348,18 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     if len(threshold_detection(model.vm15, threshold=0)):
         #pass
         threshold = float(np.max(model.vm15.magnitude)-0.5*np.abs(np.std(model.vm15.magnitude)))
- 
+
         print(len(threshold_detection(model.vm15, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm15.magnitude),np.min(model.vm15.magnitude))
 
         #efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
     else:
         threshold = float(np.max(model.vm15.magnitude)-0.2*np.abs(np.std(model.vm15.magnitude)))
- 
+
         efel.setThreshold(threshold)
         print(len(threshold_detection(model.vm15, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm15.magnitude))
-        
+
     if np.min(model.vm15.magnitude)<0:
         efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
     else:
@@ -368,7 +368,7 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
 
     if len(threshold_detection(model.vm30, threshold=0)):
         threshold = float(np.max(model.vm30.magnitude)-0.5*np.abs(np.std(model.vm30.magnitude)))
- 
+
         print(len(threshold_detection(model.vm30, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm30.magnitude),np.min(model.vm30.magnitude))
 
@@ -381,13 +381,13 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
         print(len(threshold_detection(model.vm15, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm15.magnitude))
 
-    if np.min(model.vm30.magnitude)<0:    
+    if np.min(model.vm30.magnitude)<0:
         efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
     else:
         efel_30 = None
-        
+
     efel.reset()
-    
+
     if hasattr(model,'information'):
         return {'model_id':model.name,'model_information':model.information,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
     else:
@@ -558,7 +558,7 @@ def mid_to_model(mid_):
     path = str('models')+str('/')+str(mid_[1])+'.p'
     if os.path.exists(path):
         return
-    
+
     model = get_static_models(mid_[1])
     if type(model) is not type(None):
         model.name = None
@@ -611,7 +611,7 @@ def faster_make_model_and_cache():
     #[ l.compute() for l in lazy_arrays[int(size/4.0):int(size/2.0)] ]
     #[ l.compute() for l in lazy_arrays[int(size/2.0):3*int(size/4.0) ] ]
     #[ l.compute() for l in lazy_arrays[int(3.0*size/4.0):-1] ]
-    
+
 
     #mid_bag = db.from_sequence(mid,npartitions=8)
     #list(mid_bag.map(mid_to_model).compute())
@@ -629,46 +629,31 @@ def model_analysis(model):
     return
 
 def analyze_models_from_cache(file_paths):
-    models = (pickle.load(open(f,'rb')) for f in file_paths )
+    models = [pickle.load(open(f,'rb')) for f in file_paths ]
     viable_paths = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
-   
+
+
     models = (m for m in models if m.vm30 is not None)
     models = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
-   
-    
 
-    #arrays = [da.from_delayed(lazy_image,           # Construct a small Dask array
-    #                                                    dtype=sample.dtype,   # for every lazy value
-    #                                                    shape=sample.shape)
-    #                    for lazy_image in models]
-
-    #stack = da.stack(arrays, axis=0)                # Stack all small Dask arrays into one
-
-    #_ = list(b.map(model_analysis).compute())
-    #return
-    ##ma = da(models,chunks=8)
-    #ma.apply_ufunc(model_analysis)
-    #return
-    
-
-    #data_bag = db.from_sequence(models,npartitions=8)
-    lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
 
     file_paths = viable_paths
 
-    data_bag = db.from_delayed([dask.delayed(m) for m in models[0:int(len(file_paths)/4.0)] ])
+    data_bag = db.from_sequence((m for m in models[0:int(len(file_paths)/4.0)]))
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_delayed([dask.delayed(m) for m in models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)]])
+    data_bag = db.from_sequence((m for m in models[int(len(file_paths)/4.0)+1:int(len(file_paths)/2.0)]))
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)]])
+    data_bag = db.from_sequence((m for m in models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)]))
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/4.0):-1]])
+    data_bag = db.from_sequence((m for m in models[int(len(file_paths)/4.0):-1]))
     _ = list(data_bag.map(model_analysis).compute())
+    
+    lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
     _ = [ l.compute() for l in lazy_arrays ]
 
     #except:
-     
-    
+
+
 def faster_feature_extraction():
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
     file_paths = glob.glob("models/*.p")
