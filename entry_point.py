@@ -10,6 +10,27 @@ import numpy as np
 import glob
 import os
 
+def write_data():
+    file_paths = glob.glob("three_feature_folder/*.p")
+    nml_data = []
+
+    for f in file_paths:
+        nml_data.append(pickle.load(open(f,'rb')))
+
+
+    file_paths = glob.glob("allen_three_feature_folder/*.p")
+    allen_analysis = []
+    for f in file_paths:
+        allen_analysis.append(pickle.load(open(f,'rb')))
+    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
+    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
+    try:
+        os.mkdir('just_data_frames')
+    except:
+        pass
+    os.system('mv onefive_df.pkl just_data_frames/')
+    os.system('mv three_df.pkl just_data_frames/')
+
 ##
 # The slow old way
 # better for debugging
@@ -19,35 +40,15 @@ import os
 ##
 # The faster way to complete everything when confident
 ##
-
-runnable_nml.faster_make_model_and_cache()
+#write_data()
+#runnable_nml.faster_make_model_and_cache()
 file_paths = glob.glob("models/*.p")
 _ = runnable_nml.analyze_models_from_cache(file_paths)
 
+
 runnable_allen.faster_run_on_allen()
 runnable_allen.faster_run_on_allen_cached()
-
-file_paths = glob.glob("three_feature_folder/*.p")
-nml_data = []
-
-for f in file_paths:
-    nml_data.append(pickle.load(open(f,'rb')))
-
-
-file_paths = glob.glob("allen_three_feature_folder/*.p")
-allen_analysis = []
-for f in file_paths:
-    allen_analysis.append(pickle.load(open(f,'rb')))
-
-
-merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
-merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
-try:
-    os.mkdir('../just_data_frames')
-except:
-    pass
-os.system('mv onefive_df.pkl ../just_data_frames/')
-os.system('mv three_df.pkl ../just_data_frames/')
+write_data()
 
 print('exists cleanly')
 sys.exit(0)
