@@ -631,7 +631,7 @@ def analyze_models_from_cache(file_paths):
     viable_paths = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
    
     models = (m for m in models if m.vm30 is not None)
-    models = ( m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) )
+    models = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
    
     
 
@@ -651,21 +651,19 @@ def analyze_models_from_cache(file_paths):
 
     #data_bag = db.from_sequence(models,npartitions=8)
     lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
-        #import xarray.ufuncs as xu
-    [ l.compute() for l in lazy_arrays ]
 
-    #except:
     file_paths = viable_paths
-    #models = ( dask.delayed(i) for i in models )
 
-    data_bag = db.from_delayed([dask.delayed(m) for m in models[0:int(len(file_paths)/4.0)] ],npartitions=8)
+    data_bag = db.from_delayed([dask.delayed(m) for m in models[0:int(len(file_paths)/4.0)] ])
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_delayed([dask.delayed(m) for m in models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)]],npartitions=8)
+    data_bag = db.from_delayed([dask.delayed(m) for m in models[int(len(files_paths)/4.0)+1:int(len(file_paths)/2.0)]])
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)]],npartitions=8)
+    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/2.0)+1:3*int(len(file_paths)/4.0)]])
     _ = list(data_bag.map(model_analysis).compute())
-    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/4.0):-1]],npartitions=8)
+    data_bag = db.from_sequence([dask.delayed(m) for m in models[int(len(file_paths)/4.0):-1]])
     _ = list(data_bag.map(model_analysis).compute())
+    _ = [ l.compute() for l in lazy_arrays ]
+
     #except:
      
     
