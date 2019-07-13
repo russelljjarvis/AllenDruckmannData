@@ -94,63 +94,6 @@ import pickle
 from get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
 import quantities as qt
 
-#
-
-
-
-
-
-
-def generate_prediction(self,model):
-    prediction = {}
-    prediction['n'] = 1
-    prediction['std'] = 1.0
-    prediction['mean'] = model.rheobase['mean']
-    return prediction
-
-def find_nearest(array, value):
-    #value = float(value)
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
-
-
-
-def crawl_ids(url):
-    ''' move to aibs '''
-    all_data = requests.get(url)
-    all_data = json.loads(all_data.text)
-    Model_IDs = []
-    for d in all_data:
-        Model_ID = str(d['Model_ID'])
-        Model_IDs.append(Model_ID)
-    return Model_IDs
-
-list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
-    str('https://www.neuroml-db.org/api/search?q=markram'),
-    str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
-
-def get_all_cortical_cells(list_to_get):
-    model_ids = {}
-    for url in list_to_get:
-        Model_IDs = crawl_ids(url)
-        parts = url.split('?q=')
-        try:
-            model_ids[parts[1]].append(Model_IDs)
-        except:
-            model_ids[parts[1]] = []
-            model_ids[parts[1]].append(Model_IDs)
-    with open('cortical_cells_list.p','wb') as f:
-        pickle.dump(model_ids,f)
-
-    return model_ids
-
-
-
-
-def get_waveform_current_amplitude(waveform):
-    return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
-
 
 def sweep_to_analog_signal(sweep_data):
     temp_vm = sweep_data['response']
@@ -160,24 +103,6 @@ def sweep_to_analog_signal(sweep_data):
     vm = vm.rescale(qt.mV)
     return vm
 
-def find_nearest(array, value):
-    array = [float(arr_) for arr_ in array]
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return (array[idx], idx)
-
-
-def find_nearest_data_point(current_list,numbers):
-    (nearest,idx) = find_nearest(current_list,current)
-    index = np.asarray(numbers)[idx]
-    return (index, nearest)
-    #sweep_data = data_set.get_sweep(supras[idx]['sweep_number'])
-
-def nearest_to_sweep(nearest,idx,numbers):
-    #(nearest,idx) = find_nearest(current_list,current)
-    #index = np.asarray(numbers)[idx]
-    sweep_data = data_set.get_sweep(supras[idx]['sweep_number'])
-    return sweep_data
 import copy
 def get_15_30(model,rheobase,data_set=None):
     '''
@@ -230,6 +155,7 @@ def get_15_30(model,rheobase,data_set=None):
 def inject_square_current(model,current,data_set=None):
     '''
     model, data_set is basically like a lookup table.
+    draws from a dictionary of stored models
     '''
     if type(current) is type({}):
         current = current['amplitude']
@@ -304,7 +230,7 @@ def get_data_sets_from_cache():
     files = glob.glob(path_name+'/*.p')
     data_sets = []
     for temp_path in files:
-        print(temp_path)
+        #print(temp_path)
         if os.path.exists(temp_path):
             with open(temp_path,'rb') as f:
                 (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
