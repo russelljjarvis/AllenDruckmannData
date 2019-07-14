@@ -10,26 +10,6 @@ import numpy as np
 import glob
 import os
 
-def write_data():
-    file_paths = glob.glob("three_feature_folder/*.p")
-    nml_data = []
-
-    for f in file_paths:
-        nml_data.append(pickle.load(open(f,'rb')))
-
-
-    file_paths = glob.glob("allen_three_feature_folder/*.p")
-    allen_analysis = []
-    for f in file_paths:
-        allen_analysis.append(pickle.load(open(f,'rb')))
-    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
-    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
-    try:
-        os.mkdir('just_data_frames')
-    except:
-        pass
-    os.system('mv onefive_df.pkl just_data_frames/')
-    os.system('mv three_df.pkl just_data_frames/')
 
 ##
 # The slow old way
@@ -42,12 +22,52 @@ def write_data():
 ##
 #write_data()
 #runnable_nml.faster_make_model_and_cache()
-file_paths = glob.glob("models/*.p")
-_ = runnable_nml.analyze_models_from_cache(file_paths)
+def cnt_check(cnt):
+    if (10+cnt)>size:
+        cnt+=1
+    else:
+        cnt += 10
+    if cnt>= size:
+        cnt = -1
+    return cnt
 
+def path_manipulation():
+    cnt = 0
+    viable_models = []
+    size = len(glob.glob("models/*.p"))
+    while len(viable_models)<10:
+        temp_paths = list(glob.glob("models/*.p"))[cnt:10+cnt]
+
+        models = [ pickle.load(open(f,'rb')) for f in temp_paths ]
+        for p,m in zip(temp_paths,models):
+            m.path = None
+            m.path = p
+        temp = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
+
+        viable_models.extend(temp)
+        cnt = cnt_check(cnt)
+        if cnt == -1:
+            return
+    _ = runnable_nml.analyze_models_from_cache(viable_models)
+    try:
+        os.mkdir('completed_model')
+    except:
+        print('directory exists')
+    for vm in viable_models:
+        os.system(str('mv ')+str(vm.path)+str(' completed_model'))
+    #print('exists cleanly')
+    #exit(0)
+    #return True
+
+
+#additional_paths = glob.glob("data_nwbs/*.p")
+other_paths = path_manipulation()
+'''
+runnable_allen.faster_run_on_allen_cached()
 
 runnable_allen.faster_run_on_allen()
 runnable_allen.faster_run_on_allen_cached()
+'''
 write_data()
 
 print('exists cleanly')

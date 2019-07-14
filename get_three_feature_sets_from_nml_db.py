@@ -78,6 +78,14 @@ from dask import bag as db
 import glob
 
 import copy
+from elephant.spike_train_generation import threshold_detection
+
+import csv
+
+
+import dask
+import dask.array as da
+
 
 
 def crawl_ids(url):
@@ -182,7 +190,6 @@ def get_static_models(cell_id):
     model.vminh =  model.inject_square_current(current)
 
     return model
-from elephant.spike_train_generation import threshold_detection
 
 def allen_format(volts,times,optional_vm=None):
     '''
@@ -477,23 +484,59 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
     #pdb.set_trace()
 
     merged = pd.merge(dfe, dfd, right_index=True, left_index=True)
-    final = pd.merge(merged, dfa, right_index=True, left_index=True)
+    df = pd.merge(merged, dfa, right_index=True, left_index=True)
     if other_dir is None:
         if onefive:
             with open(str('onefive_df.pkl'),'wb') as f:
-                pickle.dump(final,f)
+                pickle.dump(df,f)
         else:
             with open(str('three_df.pkl'),'wb') as f:
-                pickle.dump(final,f)
+                pickle.dump(df,f)
 
     else:
         if onefive:
             with open(str(other_dir)+str('/onefive_df.pkl'),'wb') as f:
-                pickle.dump(final,f)
+                pickle.dump(df,f)
         else:
             with open(str(other_dir)+str('/three_df.pkl'),'wb') as f:
-                pickle.dump(final,f)
+                pickle.dump(df,f)
+    # A function to convert all cells containing array (or other things) into floats.
+    def f(x):
+        try:
+            return np.mean(x)
+        except:
+            try:
+                return np.mean(x['pred'])
+            except:
+                print(x)
+                raise e
 
+    # Apply this function to each dataframe in order to convert all cells into floats.
+    # Also call fillna() first to impute missing values with 0's.
+    df_15x = df_15x.fillna(0).applymap(f)
+    df_30x = df_30x.fillna(0).applymap(f)
+
+
+    df = df_15x.join(df_30x, lsuffix='_1.5x', rsuffix='_3.0x')
+    # Impute remaining missing values with 0.
+    df = df.fillna(0)
+
+    # Turn all features into Normal(0,1) variables
+    # Important since features all have different scales
+    from sklearn.preprocessing import StandardScaler
+    ss = StandardScaler()
+    df[:] = ss.fit_transform(df.values)
+    model_idx = [idx for idx in df.index.values if type(idx)==str]
+    model_no_trans_df = df[df.index.isin(model_idx)]
+    model_no_trans_df.index.name = 'Cell_ID'
+    model_df = model_no_trans_df.copy()
+    model_df.index.name = 'Cell_ID'
+
+    # make experiment dataframe
+    experiment_idx = [idx for idx in df.index.values if type(idx)==int]
+    experiment_no_trans_df = df[df.index.isin(experiment_idx)]
+    experiment_df = experiment_no_trans_df.copy()
+    print(len(experiment_df))
     return final
 
 
@@ -568,12 +611,6 @@ def mid_to_model(mid_):
             pickle.dump(model,f)
     return
 
-import csv
-
-
-import dask
-import dask.array as da
-
 def faster_make_model_and_cache():
     '''
     Synposis:
@@ -628,6 +665,46 @@ def model_analysis(model):
             import pdb; pdb.set_trace()
     return
 
+
+def write_data_to_df():
+    '''
+    vertically and horizontally merge data frames
+    '''
+    file_paths = glob.glob("three_feature_folder/*.p")
+    nml_data = []
+
+    for f in file_paths:
+        nml_data.append(pickle.load(open(f,'rb')))
+    file_paths = glob.glob("allen_three_feature_folder/*.p")
+    allen_analysis = []
+    for f in file_paths:
+        allen_analysis.append(pickle.load(open(f,'rb')))
+    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=True,other_dir=os.getcwd())
+    merged = runnable_nml.giant_frame(allen_analysis,nml_data,onefive=False,other_dir=os.getcwd())
+
+
+    try:
+        os.mkdir('just_data_frames')
+    except:
+        pass
+    os.system('mv onefive_df.pkl just_data_frames/')
+    os.system('mv three_df.pkl just_data_frames/')
+
+def analyze_models_from_cache(models):
+    data_bag = db.from_sequence(models,npartitions=8)
+    analysis = list(data_bag.map(model_analysis).compute())
+
+
+'''
+    models = (pickle.load(open(f,'rb')) for f in paths)
+    models = (m for m in models if m.vm30 is not None)
+    import pdb; pdb.set_trace()
+    m = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
+    models = [ m for m in models if not os.path.exists(str('allen_three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
+    models.extend(m)
+    cnt = len(models)
+'''
+'''
 def analyze_models_from_cache(file_paths):
     models = [pickle.load(open(f,'rb')) for f in file_paths ]
     viable_paths = [ m for m in models if not os.path.exists(str('three_feature_folder')+str('/')+str(m.name)+str('.p')) ]
@@ -638,7 +715,6 @@ def analyze_models_from_cache(file_paths):
 
 
     file_paths = viable_paths
-
     data_bag = db.from_sequence((m for m in models[0:int(len(file_paths)/4.0)]))
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence((m for m in models[int(len(file_paths)/4.0)+1:int(len(file_paths)/2.0)]))
@@ -647,12 +723,11 @@ def analyze_models_from_cache(file_paths):
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence((m for m in models[int(len(file_paths)/4.0):-1]))
     _ = list(data_bag.map(model_analysis).compute())
-    
     lazy_arrays = [dask.delayed(model_analysis)(m) for m in models]
     _ = [ l.compute() for l in lazy_arrays ]
 
     #except:
-
+'''
 
 def faster_feature_extraction():
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))

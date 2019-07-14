@@ -102,7 +102,8 @@ class DMTNMLO(object):
         self.model_cache = model_cache
 
     def set_expected(self, expected_values):
-        assert len(expected_values) == len(self.test_set)
+        #
+        assert (len(expected_values) == len(self.test_set)) or (len(expected_values) == len(self.test_set)+1)
 
         for i, v in enumerate(expected_values):
             self.test_set[i]['expected'] = v
@@ -119,8 +120,6 @@ class DMTNMLO(object):
         inputs: model_id, and a dictionary lookup table of models/model_ids
 
         '''
-        if not hasattr(self, "expected"):
-            self.expected = [0.0 for i in range(38)]
 
 
         if type(model) is type(None):
@@ -180,8 +179,11 @@ class DMTNMLO(object):
             {'test': Burst1ISISDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             ]
         if ir_current_limited==True:
-            del self.test_set.remove[16]
+            del self.test_set[16]
+        if not hasattr(self, "expected"):
+            self.expected = [0.0 for i in range(len(self.test_set))]
         self.set_expected(self.expected)
+
         #import pdb; pdb.set_trace()
 
     '''

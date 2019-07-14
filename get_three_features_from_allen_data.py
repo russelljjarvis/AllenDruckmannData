@@ -93,6 +93,14 @@ import pickle
 
 from get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
 import quantities as qt
+import copy
+
+
+def find_nearest(array, value):
+    #value = float(value)
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return (array[idx], idx)
 
 
 def sweep_to_analog_signal(sweep_data):
@@ -103,7 +111,6 @@ def sweep_to_analog_signal(sweep_data):
     vm = vm.rescale(qt.mV)
     return vm
 
-import copy
 def get_15_30(model,rheobase,data_set=None):
     '''
     model, data_set is basically like a lookup table.
@@ -291,12 +298,121 @@ def get_data_sets(upper_bound=2,lower_bound=None):
     return data_sets
 
 
+def get_static_models_allen(content):
+    data_set,sweeps,specimen_id = content
+    try:
+        sweep_numbers = data_set.get_sweep_numbers()
+    except:
+        return (False,specimen_id)
+    for sn in sweep_numbers:
+        spike_times = data_set.get_spike_times(sn)
+        sweep_data = data_set.get_sweep(sn)
+    ##
+    # cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    ##
+    cell_features = None
+    if cell_features is not None:
+        spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
+        multi_spike_features = cell_features['long_squares']['hero_sweep']
+        biophysics = cell_features['long_squares']
+        shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
+
+    supras = [s for s in sweeps if s['stimulus_name'] == str('Square - 2s Suprathreshold')]
+    if len(supras) == 0:
+        return None
+    supra_numbers = [s['sweep_number'] for s in supras]
+
+    smallest_multi = 1000
+    all_currents = []
+    temp_vm = None
+    for sn in supra_numbers:
+        spike_times = data_set.get_spike_times(sn)
+        sweep_data = data_set.get_sweep(sn)
+
+        if len(spike_times) == 1:
+            inj_rheobase = np.max(sweep_data['stimulus'])
+            temp_vm = sweep_data['response']
+            break
+        if len(spike_times) < smallest_multi and len(spike_times) > 1:
+            smallest_multi = len(spike_times)
+            inj_multi_spike = np.max(sweep_data['stimulus'])
+            inj_rheobase = inj_multi_spike
+            temp_vm = sweep_data['response']
+
+    spike_times = data_set.get_spike_times(supras[-1]['sweep_number'])
+    sweep_data = data_set.get_sweep(supras[-1]['sweep_number'])
+    sd = sweep_data['stimulus']
+    # sampling rate is in Hz
+    sampling_rate = sweep_data['sampling_rate']
+
+    inj = AnalogSignal(sd,sampling_rate=sampling_rate*qt.Hz,units=qt.pA)
+
+    indexs = np.where(sd==np.max(sd))[0]
+
+
+
+    if temp_vm is None:
+        return (None,None,None,None)
+    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    sm = models.StaticModel(vm)
+    sm.allen = None
+    sm.allen = True
+    sm.protocol = {}
+    sm.protocol['Time_Start'] = inj.times[indexs[0]]
+    sm.protocol['Time_End'] = inj.times[indexs[-1]]
+
+    sm.name = specimen_id
+    sm.data_set = data_set
+    sm.sweeps = sweeps
+    sm.inject_square_current = MethodType(inject_square_current,sm)
+    sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
+
+
+    sm.rheobase_current = inj_rheobase
+    current = {}
+    current['amplitude'] = sm.rheobase_current
+    sm.vm_rheobase = sm.inject_square_current(current)
+
+    try:
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot([float(t) for t in sm.vm30.times],[float(v) for v in sm.vm30], label="data", width=100, height=80)
+        fig.show()
+
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot([float(t) for t in sm.vm15.times],[float(v) for v in sm.vm15], label="data", width=100, height=80)
+        fig.show()
+    except:
+        pass
+    sm.get_spike_count = MethodType(get_spike_count,sm)
+    subs = [s for s in sweeps if s['stimulus_name'] == str('Square - 0.5ms Subthreshold')]
+    sub_currents = [(s['stimulus_absolute_amplitude']*qt.A).rescale(qt.pA) for s in subs]
+    if len(sub_currents) == 3:
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[1], sub_currents[2] ]
+
+    elif len(sub_currents) == 2:
+
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[1] ]
+    elif len(sub_currents) == 1:
+        # unfortunately only one inhibitory current available here.
+        sm.druckmann2013_input_resistance_currents = [ sub_currents[0], sub_currents[0], sub_currents[0] ]
+    try:
+        sm.inject_square_current(sub_currents[0])
+    except:
+        pass
+    get_15_30(sm,inj_rheobase)
+    #everything = (sm,sweep_data,cell_features,vm)
+    with open(str('models')+str('/')+str(specimen_id)+'.p','wb') as f:
+        pickle.dump(sm,f)
+    return (True,specimen_id)
+
 
 def allen_to_model_and_features(content):
     data_set,sweeps,specimen_id = content
-    sweep_numbers_ = defaultdict(list)
-    for sweep in sweeps:
-        sweep_numbers_[sweep['stimulus_name']].append(sweep['sweep_number'])
+    #sweep_numbers_ = defaultdict(list)
+    #for sweep in sweeps:
+    #    sweep_numbers_[sweep['stimulus_name']].append(sweep['sweep_number'])
     try:
         sweep_numbers = data_set.get_sweep_numbers()
     except:
@@ -481,7 +597,7 @@ def faster_run_on_allen(number_d_sets=1300):
             lazy_arrays = [dask.delayed(allen_to_model_and_features)(m) for m in data_sets]
             models = [ l.compute() for l in lazy_arrays ]
 
-                    
+
             #data_bag = db.from_sequence(data_sets,npartitions=8)
             #models = list(data_bag.map(allen_to_model_and_features).compute())
             models = [mod for mod in models if mod is not None]
@@ -511,7 +627,7 @@ def faster_run_on_allen(number_d_sets=1300):
     _ = list(data_bag.map(model_analysis).compute())
     data_bag = db.from_sequence(models[int(len(models)/4.0):-1],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
-   
+
 
     data_bag = db.from_sequence(models[0:int(len(models)/2.0)],npartitions=8)
     _ = list(data_bag.map(model_analysis).compute())
