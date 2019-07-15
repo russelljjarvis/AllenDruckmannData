@@ -13,17 +13,6 @@ import os
 from get_three_features_from_allen_data import get_static_models_allen
 import dask.bag as db # a pip installable module, usually installs without complication
 
-##
-# The slow old way
-# better for debugging
-# uncomment
-#runnable_nml.recoverable_interuptable_batch_process()
-
-##
-# The faster way to complete everything when confident
-##
-#write_data()
-#runnable_nml.faster_make_model_and_cache()
 def cnt_check(cnt,size):
     if (8+cnt)>size:
         cnt+=1
@@ -119,21 +108,7 @@ def build_allen_models():
             return
 
 build_allen_models()
-
 new()
+runnable_nml.write_data()
 
-#additional_paths = glob.glob("data_nwbs/*.p")
-#_ = new()
-#exit(0)
 
-#exit(0)
-
-'''
-runnable_allen.faster_run_on_allen_cached()
-
-runnable_allen.faster_run_on_allen()
-runnable_allen.faster_run_on_allen_cached()
-'''
-#write_data()
-
-#print('exists cleanly')
