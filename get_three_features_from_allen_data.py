@@ -232,7 +232,7 @@ def get_spike_count(model):
 
 
 
-def get_data_sets_from_cache():
+def get_data_sets_from_cache(do_features=True):
     path_name = 'data_nwbs'
     files = glob.glob(path_name+'/*.p')
     data_sets = []
@@ -242,12 +242,13 @@ def get_data_sets_from_cache():
             with open(temp_path,'rb') as f:
                 (data_set_nwb,sweeps,specimen_id) = pickle.load(f)
             data_sets.append((data_set_nwb,sweeps,specimen_id))
-            allen_to_model_and_features(data_sets[-1])
+            if do_features == True:
+                allen_to_model_and_features(data_sets[-1])
     return data_sets
 
 
 
-def get_data_sets(upper_bound=2,lower_bound=None):
+def get_data_sets_from_remote(upper_bound=2,lower_bound=None):
     try:
         with open('all_allen_cells.p','rb') as f: cells = pickle.load(f)
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
@@ -308,7 +309,10 @@ def get_static_models_allen(content):
         spike_times = data_set.get_spike_times(sn)
         sweep_data = data_set.get_sweep(sn)
     ##
-    # cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    try:
+        cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    except:
+        print('did this used to work?')
     ##
     cell_features = None
     if cell_features is not None:
@@ -408,22 +412,12 @@ def get_static_models_allen(content):
     return (True,specimen_id)
 
 
-def allen_to_model_and_features(content):
+def allen_to_model_and_features(content,cell_features = None):
     data_set,sweeps,specimen_id = content
-    #sweep_numbers_ = defaultdict(list)
-    #for sweep in sweeps:
-    #    sweep_numbers_[sweep['stimulus_name']].append(sweep['sweep_number'])
     try:
         sweep_numbers = data_set.get_sweep_numbers()
     except:
-        #import pdb; pdb.set_trace()
         print('erroneous deletion of relevant ephys.nwb file')
-        '''
-        ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
-
-        data_set = ctc.get_ephys_data(specimen_id)
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
-        '''
         file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
         data_set_nwb = NwbDataSet(file_name)
         try:
@@ -437,10 +431,12 @@ def allen_to_model_and_features(content):
 
 
     ##
-    # cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
-    ##
-    cell_features = None
+    #if cell_features is not None:
+
+
     if cell_features is not None:
+        cell_features = extract_cell_features(data_set, sweep_numbers_['Ramp'],sweep_numbers_['Short Square'],sweep_numbers_['Long Square'])
+    ##
         spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
         multi_spike_features = cell_features['long_squares']['hero_sweep']
         biophysics = cell_features['long_squares']

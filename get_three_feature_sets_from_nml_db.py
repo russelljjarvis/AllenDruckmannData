@@ -226,8 +226,19 @@ def allen_format(volts,times,optional_vm=None):
     for sk in skeys:
         if str('isi_type') not in sk:
             meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
-#
+    allen_features = {}
+    meaned_features_overspikes = {}
+    for s in swp.sweep_feature_keys():# print(swp.sweep_feature(s))
+        if str('isi_type') not in s:
+            allen_features[s] = swp.sweep_feature(s)
 
+    allen_features.update(meaned_features_1)
+    return meaned_features_overspikes, allen_features
+
+    '''
+    for sk in skeys:
+        if str('isi_type') not in sk:
+            meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
     allen_features = {}
     meaned_features_overspikes = {}
     for s in swp.sweep_feature_keys():# print(swp.sweep_feature(s))
@@ -249,8 +260,7 @@ def allen_format(volts,times,optional_vm=None):
 
 
     meaned_features_overspikes.update(meaned_features_1)
-    #all_allen_features = meaned_features_overspikes
-    return meaned_features_overspikes, allen_features
+    '''
 
 #from elephant.spike_train_generation import threshold_detection
 
@@ -444,7 +454,8 @@ def nmldm(nml_data):
 
     df = pd.DataFrame(list_of_dicts,index=indexs)
     return df
-
+from sklearn.preprocessing import StandardScaler
+ss = StandardScaler()
 def nmlallen(nml_data,onefive=True):
     indexs = [ nml['model_id'] for nml in nml_data ]
     if onefive:
@@ -523,8 +534,7 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
 
     # Turn all features into Normal(0,1) variables
     # Important since features all have different scales
-    from sklearn.preprocessing import StandardScaler
-    ss = StandardScaler()
+
     df[:] = ss.fit_transform(df.values)
     model_idx = [idx for idx in df.index.values if type(idx)==str]
     model_no_trans_df = df[df.index.isin(model_idx)]
@@ -534,7 +544,9 @@ def giant_frame(allen_analysis,nml_data,onefive=True,other_dir=None):
 
     # make experiment dataframe
     experiment_idx = [idx for idx in df.index.values if type(idx)==int]
+
     experiment_no_trans_df = df[df.index.isin(experiment_idx)]
+
     experiment_df = experiment_no_trans_df.copy()
     print(len(experiment_df))
     return final

@@ -66,6 +66,7 @@ def build_iterator():
         if cnt == -1:
             return None
     return viable_models
+    
 def new():
     viable_models = 1.0
     while viable_models is not None:
@@ -81,6 +82,9 @@ def new():
     return
 
 def build_allen_models():
+    '''
+
+    '''
     cnt = 0
     viable_models = []
     size = len(glob.glob("data_nwbs/*.p"))
@@ -89,8 +93,11 @@ def build_allen_models():
 
         pre_models = [ pickle.load(open(f,'rb')) for f in temp_paths ]
         pre_models = [ (m[0],m[1],m[2]) for m in pre_models if not os.path.exists(str('models')+str('/')+str(m[2])+str('.p')) ]
-        pre_models_bag = db.from_sequence(pre_models,npartitions=8)
-        list_of_nones = list(pre_models_bag.map(get_static_models_allen).compute())#(pre_models)
+        try:
+            pre_models_bag = db.from_sequence(pre_models,npartitions=8)
+            list_of_nones = list(pre_models_bag.map(get_static_models_allen).compute())#(pre_models)
+        except:
+
         list_of_nones = [l for l in list_of_nones if l is not None ]
         file_paths_to_broken = [l for l in list_of_nones if l[1] is False ]
         try:
@@ -110,5 +117,3 @@ def build_allen_models():
 build_allen_models()
 new()
 runnable_nml.write_data()
-
-
