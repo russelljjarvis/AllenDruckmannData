@@ -29,7 +29,6 @@
 ##
 
 
-from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 try:
     import cPickle
 except:
@@ -79,6 +78,7 @@ import glob
 
 import copy
 from elephant.spike_train_generation import threshold_detection
+from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 
 import csv
 
@@ -98,9 +98,9 @@ def crawl_ids(url):
         Model_IDs.append(Model_ID)
     return Model_IDs
 
-list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
-    str('https://www.neuroml-db.org/api/search?q=markram'),
-    str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
+list_to_get =[ str('https://neuroml-db.org/api/search?q=traub'),
+    str('https://neuroml-db.org/api/search?q=markram'),
+    str('https://neuroml-db.org/api/search?q=Gouwens') ]
 
 def get_all_cortical_cells(list_to_get):
     model_ids = {}
@@ -117,6 +117,37 @@ def get_all_cortical_cells(list_to_get):
 
     return model_ids
 
+def get_markram(url = "https://neuroml-db.org/api/search?q=Markram"):
+    model_ids = {}
+    #for url in list_to_get:
+    Model_IDs = crawl_ids(url)
+    parts = url.split('?q=')
+    try:
+        model_ids[parts[1]].append(Model_IDs)
+    except:
+        model_ids[parts[1]] = []
+        model_ids[parts[1]].append(Model_IDs)
+    with open('markram.p','wb') as f:
+        pickle.dump(model_ids,f)
+
+    return model_ids
+
+
+
+def get_gouwens(url = "https://neuroml-db.org/api/search?q=Gouwens"):
+    model_ids = {}
+    #for url in list_to_get:
+    Model_IDs = crawl_ids(url)
+    parts = url.split('?q=')
+    try:
+        model_ids[parts[1]].append(Model_IDs)
+    except:
+        model_ids[parts[1]] = []
+        model_ids[parts[1]].append(Model_IDs)
+    with open('gouwens.p','wb') as f:
+        pickle.dump(model_ids,f)
+
+    return model_ids
 
 
 def get_waveform_current_amplitude(waveform):
@@ -135,7 +166,7 @@ def get_static_models(cell_id):
     """
 
 
-    url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
+    url = str("https://neuroml-db.org/api/model?id=")+cell_id
     #import pdb
     #pdb.set_trace()
     model_contents = requests.get(url)
@@ -284,6 +315,16 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     ##
 
     #import pdb; pdb.set_trace()
+    if type(model) is type(DataTC()):
+        model = model.dtc_to_model()
+    if not hasattr(model,'vm30'):
+        model.inject_square_current(model.rheobase*3.0)
+        model.vm30 = model.get_membrane_potential()
+        ['amplitude']
+        model.inject_square_current()
+        model.vm15 = model.get_membrane_potential()
+
+
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
     try:
