@@ -1,0 +1,85 @@
+---
+title: "**LARGE SCALE DISCRIMINATION BETWEEN NEURAL MODELS AND EXPERIMENTAL DATA**"
+output: 
+  postr::flex_dashboard_poster:
+    render_print: true
+---
+
+
+## Header row {data-height=15}
+
+###
+
+<table style="width:100%">
+<tr>
+  <td><center><h3>
+  **LARGE SCALE DISCRIMINATION BETWEEN NEURAL MODELS AND EXPERIMENTAL DATA**
+  </h3></center></td>
+  <td rowspan="2">
+  <img src="resources/cool_logo.png" style="width:110px"></img>
+  </td>
+</tr>
+<tr><td><center>
+  Russell Jarvis, Professor Rick Gerkin
+  </center></td>
+</tr>
+</table> 
+
+<hr>
+
+
+
+**Abstract** 
+NeuroML-DB [2] catalogues over 1,500 published models obtained in NeuroML format from Open Source Brain [5]. Complementing OSB, NeuroML-DB provides systematic characterizations of model complexity,  electrophysiology, and morphology, making it easy to find, evaluate, and reuse models and their components
+
+
+
+
+## Body row {data-height=75}
+
+### **MODELING METHODS**
+How good are reduced Neural Models?
+#### Heading
+
+
+### Publications Associated with Model Sources:
+To compile this poster do:
+```
+R -e "rmarkdown::render('CNS_poster_2020.Rmd',output_file='CNS_poster_2020.html')"
+```
+### Izhikevich model
+Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions on neural networks 14.6 (2003): 1569-1572.
+PubMed 15484883
+
+### Example Features
+We unified three different feature extraction protocols to create a very high 
+dimensional feature space.
+
+
+```{r setup, include=FALSE}
+library(reticulate)
+use_python("/anaconda3/bin/python")
+```
+
+### **Dimensionality Reduction**
+
+
+![Sparse PCA Embedding](resources/sparse_pca_embedd.png)
+
+```
+import pickle
+import pandas as pd
+```
+
+### **EigenValue Component Loadings**
+![Sparse PCA Eigenvalue Unit Vectors](resources/sparse_pca_loadings.png)
+
+
+## Footer row {data-height=10} 
+
+### {data-width=50}
+
+
+### {data-width=50 .small}
+
+
