@@ -2,8 +2,8 @@
 
 https://russelljjarvis.github.io/AllenEFELDruckmanData/CNS_poster_2020.html
 ##
-# Unify 3 third party feature extraction protocols.
-# Apply the knitted features to NeuroML-DB static waveforms, Allen and BBP experimental Recordings.
+# Unify three different feature extraction protocols.
+# Apply the knitted features to NeuroML-DB model waveform and also Allen and BBP experimental Recordings.
 ##
 
 This repository contains:
