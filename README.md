@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/russelljjarvis/AllenEFELDruckmanData.png)](https://travis-ci.org/russelljjarvis/AllenEFELDruckmanData)
 
-https://russelljjarvis.github.io/AllenEFELDruckmanFeatures/CNS_poster_2020.html
+https://russelljjarvis.github.io/AllenEFELDruckmanFeatures/index.html
 ##
 # Unify three different feature extraction protocols.
 # Apply the knitted features to NeuroML-DB model waveform and also Allen and BBP experimental Recordings.
