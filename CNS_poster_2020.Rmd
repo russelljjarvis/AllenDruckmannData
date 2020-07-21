@@ -20,7 +20,7 @@ output:
   </td>
 </tr>
 <tr><td><center>
-  Russell Jarvis, Professor Rick Gerkin
+  Russell Jarvis, Professor Rick Gerkin, Professor Sharon M Crook
   </center></td>
 </tr>
 </table> 
@@ -35,31 +35,45 @@ NeuroML-DB [2] catalogues over 1,500 published models obtained in NeuroML format
 
 
 
-## Body row {data-height=75}
+## Body row {data-height=115}
 
 ### **MODELING METHODS**
-How good are reduced Neural Models?
-#### Heading
+**Publications Associated with Model Sources:**
+
+|Large Scale Model|Blue Brain Project (1035)|Gouwens et al (2018) [6]|
+|---|---|---|
+Publication|Markram et al (2015) [8]| Gouwens et al (2018) [6]|
+**Feature Sources: **
+
+|Feature1|Feature2|Feature3|
+|---|---|---|
+|Ephys Feature Extraction Library | allensdk.ephys.ephys_features | Druckmann et al. (2012) [3] |
 
 
-### Publications Associated with Model Sources:
-To compile this poster do:
-```
-R -e "rmarkdown::render('CNS_poster_2020.Rmd',output_file='CNS_poster_2020.html')"
-```
-### Izhikevich model
-Izhikevich, Eugene M. "Simple model of spiking neurons." IEEE Transactions on neural networks 14.6 (2003): 1569-1572.
-PubMed 15484883
+**Virtual Experiment Three Step Protocol Stimulate for 2s**
+
+|Injection 1 |Injection 2|Injection 3|  
+|---|---|---|
+| at 1.0×Rheobase | at 1.5×Rheobase  | at 3.0×Rheobase  |   
+
 
 ### Example Features
 We unified three different feature extraction protocols to create a very high 
 dimensional feature space.
 
+To compile this poster do:
+```
+in R install library: postr
+BASH terminal Run:
+R -e "rmarkdown::render('CNS_poster_2020.Rmd',output_file='CNS_poster_2020.html')"
+Or use knit inside R-studio
+```
 
 ```{r setup, include=FALSE}
 library(reticulate)
 use_python("/anaconda3/bin/python")
 ```
+
 
 ### **Dimensionality Reduction**
 
@@ -78,6 +92,10 @@ import pandas as pd
 ## Footer row {data-height=10} 
 
 ### {data-width=50}
+Interactive Plots:
+[dimension_reduced_TSNE](dimension_reduced_TSNE.html)
+
+
 
 
 ### {data-width=50 .small}

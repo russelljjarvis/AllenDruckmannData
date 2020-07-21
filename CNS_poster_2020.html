@@ -2620,12 +2620,7 @@ Russell Jarvis, Professor Rick Gerkin, Professor Sharon M Crook
 <div id="modeling-methods" class="section level3">
 <h3><strong>MODELING METHODS</strong></h3>
 <p><strong>Publications Associated with Model Sources:</strong></p>
-<table style="width:17%;">
-<colgroup>
-<col width="5%"></col>
-<col width="5%"></col>
-<col width="5%"></col>
-</colgroup>
+<table>
 <thead>
 <tr class="header">
 <th>Large Scale Model</th>
@@ -2639,8 +2634,25 @@ Russell Jarvis, Professor Rick Gerkin, Professor Sharon M Crook
 <td>Markram et al (2015) [8]</td>
 <td>Gouwens et al (2018) [6]</td>
 </tr>
-<tr class="even">
-<td>Feature Sources: EFEL</td>
+</tbody>
+</table>
+<p><strong>Feature Sources: </strong></p>
+<table style="width:17%;">
+<colgroup>
+<col width="5%"></col>
+<col width="5%"></col>
+<col width="5%"></col>
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature1</th>
+<th>Feature2</th>
+<th>Feature3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Ephys Feature Extraction Library</td>
 <td>allensdk.ephys.ephys_features</td>
 <td>Druckmann et al. (2012) [3]</td>
 </tr>
@@ -2663,13 +2675,15 @@ Russell Jarvis, Professor Rick Gerkin, Professor Sharon M Crook
 </tr>
 </tbody>
 </table>
-<p>To compile this poster do:</p>
-<pre><code>in R install library: postr
-R -e &quot;rmarkdown::render('CNS_poster_2020.Rmd',output_file='CNS_poster_2020.html')&quot;</code></pre>
 </div>
 <div id="example-features" class="section level3">
 <h3>Example Features</h3>
 <p>We unified three different feature extraction protocols to create a very high dimensional feature space.</p>
+<p>To compile this poster do:</p>
+<pre><code>in R install library: postr
+BASH terminal Run:
+R -e &quot;rmarkdown::render('CNS_poster_2020.Rmd',output_file='CNS_poster_2020.html')&quot;
+Or use knit inside R-studio</code></pre>
 </div>
 <div id="dimensionality-reduction" class="section level3">
 <h3><strong>Dimensionality Reduction</strong></h3>
