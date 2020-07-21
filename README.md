@@ -2,7 +2,8 @@
 
 
 ##
-# Apply 3 feature extraction protocols to the same NeuroML-DB static waveforms.
+# Unify 3 third party feature extraction protocols.
+# Apply the knitted features to NeuroML-DB static waveforms, Allen and BBP experimental Recordings.
 ##
 
 This repository contains:
