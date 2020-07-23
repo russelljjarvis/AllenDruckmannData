@@ -19,7 +19,7 @@ Google fonts api stuff
 
 
 
-<title>LARGE SCALE DISCRIMINATION BETWEEN NEURAL MODELS AND EXPERIMENTAL RECORDINGS</title>
+<title>Generate Reproducible &amp; Live HTML and PDF Conference Posters Using RMarkdown</title>
 
 
 
@@ -282,9 +282,9 @@ font-size: 20pt;
 </div>
 <!-- Poster Title -->
 <div class= "poster_title">
-<h1 id="title"><strong>LARGE SCALE DISCRIMINATION BETWEEN NEURAL MODELS AND EXPERIMENTAL RECORDINGS</strong></h1>
-<h3 id="author">Professor Rick Gerkin<sup>1</sup>, Professor Sharon Crook<sup>2</sup>, Russell Jarvis<sup>3</sup></h3><br>
-<h5 id="affiliation"><sup>1</sup> Department of Mathematics and Statistics, Arizona State University, USA<br> <sup>2</sup> Department of Mathematics and Statistics, Arizona State University, USA<br> <sup>3</sup> Department of Life Sciences, Arizona State University, USA</h5>
+<h1 id="title">Generate Reproducible &amp; Live HTML and PDF Conference Posters Using RMarkdown</h1>
+<h3 id="author">Professor Rick Gerkin<sup>1, <a class="orcid" href="https://orcid.org/0000-0002-1099-3857"><img src="https://raw.githubusercontent.com/brentthorne/posterdown/master/images/orcid.jpg"></a></sup>, Professor Sharon Crook<sup>2</sup>, Russell Jarvis<sup>3</sup></h3><br>
+<h5 id="affiliation"><sup>1</sup> Department of Earth Science, Brock University<br> <sup>2</sup> Department of Graphics and Layouts, University of Posters; Canada<br> <sup>3</sup> Department of Life Sciences, Arizona State University, ASU</h5>
 </div>
 <!-- Right Logo  -->
 <div class="logo_right">
@@ -294,23 +294,18 @@ font-size: 20pt;
 
 <div class='poster_body_wrap'>
 <div class='poster_body'>
-<p>nocite: | @[Brette, Romain and Gerstner, Wulfram], @[Pack, Christopher C. and Berezovskii, Vladimir K. and Born, Richard T.] ---</p>
-<div id="abstract" class="section level1">
-<h1>Abstract</h1>
-<p>NeuroML-DB [2] catalogues over 1,500 published models obtained in NeuroML format from Open Source Brain [5]. Complementing OSB, NeuroML-DB provides systematic characterizations of model complexity, electrophysiology, and morphology, making it easy to find, evaluate, and reuse models and their components</p>
-</div>
-<div id="example-features" class="section level1">
-<h1>Example Features</h1>
-We unified three different feature extraction protocols to create a very high dimensional feature space.
-<center>
-<img src="new/AP_duration_half_width.png"  style="width:50%"></img>
-</center>
-<center>
-<img src="new/AP_Amplitude.png"  style="width:50%"></img>
-</center>
-</div>
-<div id="modeling-methods" class="section level1">
-<h1>Modeling Methods</h1>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Welcome to <code>posterdown</code> ! This is my attempt to provide a semi-smooth workflow for those who wish to take their R Markdown skills to the conference world. Most features from R Markdown are available in this package such as Markdown section notation, figure captioning, and even citations like this one <span class="citation">(Allaire et al. 2020)</span>. The rest of this example poster will show how you can insert typical conference poster features into your own document.</p>
+<div id="objectives" class="section level2">
+<h2>Objectives</h2>
+<ol style="list-style-type: decimal">
+<li>Easy to use reproducible poster design.</li>
+<li>Integration with R Markdown.</li>
+<li>Easy transition from <code>posterdown</code> to <code>pagedown</code> report or manuscript documents <span class="citation">(Xie, Lesur, and Thorne 2020)</span>.</li>
+</ol>
+<div id="modeling-methods" class="section level3">
+<h3><strong>MODELING METHODS</strong></h3>
 <p><strong>Publications Associated with Model Sources:</strong></p>
 <table>
 <thead>
@@ -328,7 +323,7 @@ We unified three different feature extraction protocols to create a very high di
 </tr>
 </tbody>
 </table>
-<p><strong>Extracted Feature Sources: </strong></p>
+<p><strong>Feature Sources: </strong></p>
 <table style="width:17%;">
 <colgroup>
 <col width="5%" />
@@ -368,50 +363,38 @@ We unified three different feature extraction protocols to create a very high di
 </tbody>
 </table>
 </div>
+</div>
+</div>
 <div id="results" class="section level1">
 <h1>Results</h1>
-<div id="histogram-to-query-modeldata-agreement" class="section level2">
-<h2>Histogram to query Model/Data agreement</h2>
-<center>
-<img src="new/fast_trough_index.png" style="width:50%"></img>
-</center>
-</div>
-<div id="pca-embedding" class="section level2">
-<h2>PCA Embedding</h2>
-<center>
-<img src="resources/sparse_pca_embedd.png"  style="width:100%"></img>
-</center>
-<strong>EigenValue Component Loadings</strong>
-<center>
-<img src="resources/sparse_pca_loadings.png"  style="width:100%"></img>
-</center>
+<p>Usually you want to have a nice table displaying some important results that you have calculated. In <code>posterdown</code> this is as easy as using the <code>kable</code> table formatting you are probably use to as per typical R Markdown formatting.</p>
+<iframe src="dimension_reduced_TSNE.html" style="width:100%; height:800px;">
+</iframe>
+<div>
+<p><img src="new/AP_duration_half_width.png" style="width:100%"></img></p>
 </div>
 </div>
 <div id="next-steps" class="section level1">
 <h1>Next Steps</h1>
-<p>Optimize biophysically accurate models on the features that most disagree between models and experiments.</p>
+<p>Aliquam sed faucibus risus, quis efficitur erat. Vestibulum semper mauris quis tempus eleifend. Aliquam sagittis dictum ipsum, quis viverra ligula eleifend ut. Curabitur sagittis vitae arcu eget faucibus. In non elementum felis. Duis et aliquam nunc. Nunc pulvinar sapien nunc, vel pretium nisi efficitur in. Fusce fringilla maximus leo et maximus. Fusce at ligula laoreet, iaculis mi at, auctor odio. Praesent sed elementum justo. Aenean consectetur risus rhoncus tincidunt efficitur. Praesent dictum mauris at diam maximus maximus <span class="citation">(Thorne 2019)</span>.</p>
 </div>
-<div id="interactive-plots" class="section level1">
-<h1>Interactive Plots:</h1>
-<p>Can be included or externally linked. <a href="dimension_reduced_TSNE.html">dimension_reduced_TSNE</a></p>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>Try <code>posterdown</code> out! Hopefully you like it!</p>
 </div>
-<div id="building-the-poster" class="section level1">
-<h1>Building the Poster</h1>
-<p>This poster was created with rmarkdown utilizing a python kernel</p>
-<p>The code for this poster <a href="https://github.com/russelljjarvis/AllenEFELDruckmanFeatures/blob/gh-pages/template_two.Rmd">lives here</a> To compile this poster do:</p>
-<pre><code>BASH terminal Run:
-R -e &quot;install.packages(&#39;posterdown&#39;)&quot;
-R -e &quot;rmarkdown::render(&#39;template_two.Rmd&#39;, \
-                         output_file=\
-                         &#39;CNS_poster_2020.html&#39;)&quot;</code></pre>
-<p>To use a python kernel in this poster:</p>
-<pre><code>r, include=FALSE,echo=FALSE}
-library(reticulate)
-use_python(&quot;/anaconda3/bin/python&quot;) </code></pre>
+<div id="references" class="section level1 unnumbered">
+<h1>References</h1>
+<div id="refs" class="references">
+<div id="ref-R-rmarkdown">
+<p>Allaire, JJ, Yihui Xie, Jonathan McPherson, Javier Luraschi, Kevin Ushey, Aron Atkins, Hadley Wickham, Joe Cheng, Winston Chang, and Richard Iannone. 2020. <em>Rmarkdown: Dynamic Documents for R</em>. <a href="https://CRAN.R-project.org/package=rmarkdown" class="uri">https://CRAN.R-project.org/package=rmarkdown</a>.</p>
 </div>
-<div id="references" class="section level1">
-<h1>References:</h1>
-<p>bibliography: Russell_Prospectus_.bib</p>
+<div id="ref-R-posterdown">
+<p>Thorne, Brent. 2019. <em>Posterdown: Generate Pdf Conference Posters Using R Markdown</em>. <a href="https://CRAN.R-project.org/package=posterdown" class="uri">https://CRAN.R-project.org/package=posterdown</a>.</p>
+</div>
+<div id="ref-R-pagedown">
+<p>Xie, Yihui, Romain Lesur, and Brent Thorne. 2020. <em>Pagedown: Paginate the Html Output of R Markdown with Css for Print</em>. <a href="https://CRAN.R-project.org/package=pagedown" class="uri">https://CRAN.R-project.org/package=pagedown</a>.</p>
+</div>
+</div>
 </div>
 </div>
 </div>
